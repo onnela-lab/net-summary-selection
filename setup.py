@@ -31,5 +31,11 @@ setuptools.setup(
             'seaborn>=0.11.0',
             'sklearn'
     ],
+    extras_require={
+        'tests': [
+            'pytest',
+            'pytest-cov',
+        ]
+    },
     package_data={'': ['data/*.csv']}
 )
