@@ -1,4 +1,4 @@
-.PHONY : sync tests
+.PHONY : build sync tests
 
 requirements.txt : requirements.in setup.py
 	pip-compile -v
@@ -8,3 +8,5 @@ sync : requirements.txt
 
 tests :
 	pytest -v --cov=cost_based_selection --cov-report=html --cov-report=term
+
+build : tests
