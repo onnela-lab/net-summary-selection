@@ -33,6 +33,7 @@ setuptools.setup(
     ],
     extras_require={
         'tests': [
+            'flake8',
             'pytest',
             'pytest-cov',
         ]
