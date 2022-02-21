@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-""" Functions related to the generation of the data (reference tables) employed
+"""
+Functions related to the generation of the data (reference tables) employed
 in our paper.
 
 The models used are either four settings of the Barabási-Albert model,
@@ -12,6 +13,7 @@ import random
 import scipy.stats as ss
 from cost_based_selection import summaries
 from joblib import Parallel, delayed
+
 
 def BA_ref_table(num_sim_model, num_nodes):
     """ Generation of a reference table under the four Barabási-Albert (BA) models.
@@ -45,63 +47,29 @@ def BA_ref_table(num_sim_model, num_nodes):
             (in columns).
 
     """
+    num_attachments = [1, 2, 3, 4]
 
-    resList1 = []
-    resList2 = []
-    resList3 = []
-    resList4 = []
-
+    # Populate the dataset.
+    results = {}
+    is_discrete_dict = None
     for i in range(num_sim_model):
-        simuGraph1 = nx.barabasi_albert_graph(num_nodes, 1)
-        simuGraph2 = nx.barabasi_albert_graph(num_nodes, 2)
-        simuGraph3 = nx.barabasi_albert_graph(num_nodes, 3)
-        simuGraph4 = nx.barabasi_albert_graph(num_nodes, 4)
+        for m in num_attachments:
+            simulated_graph = nx.barabasi_albert_graph(num_nodes, m)
+            summary_dict, time_dict, is_discrete_dict = summaries.compute_summaries(simulated_graph)
+            result = {
+                'summary': summary_dict,
+                'time': time_dict,
+                'model_index': m,
+            }
+            for key, value in result.items():
+                results.setdefault(key, []).append(value)
 
-        dictSums1, dictTimes1, dictIsDisc1 = summaries.compute_summaries(simuGraph1)
-        dictSums2, dictTimes2, dictIsDisc2 = summaries.compute_summaries(simuGraph2)
-        dictSums3, dictTimes3, dictIsDisc3 = summaries.compute_summaries(simuGraph3)
-        dictSums4, dictTimes4, dictIsDisc4 = summaries.compute_summaries(simuGraph4)
+    # Convert to dataframes.
+    dfModIndex = pd.DataFrame(results.pop('model_index'), columns=["modIndex"])
+    dfIsDisc = pd.DataFrame([is_discrete_dict])
+    results = {key: pd.DataFrame(value) for key, value in results.items()}
 
-        resList1.append( [1, dictSums1, dictTimes1, dictIsDisc1] )
-        resList2.append( [2, dictSums2, dictTimes2, dictIsDisc2] )
-        resList3.append( [3, dictSums3, dictTimes3, dictIsDisc3] )
-        resList4.append( [4, dictSums4, dictTimes4, dictIsDisc4] )
-
-    modIndex = [1]*num_sim_model + [2]*num_sim_model + [3]*num_sim_model + [4]*num_sim_model
-
-    listOfSummaries = []
-    listOfIsDisc = []
-    listOfTimes = []
-
-    # Model 1
-    for simIdx in range(num_sim_model):
-        listOfSummaries += [resList1[simIdx][1]]
-        listOfTimes += [resList1[simIdx][2]]
-
-    # Model 2
-    for simIdx in range(num_sim_model):
-        listOfSummaries += [resList2[simIdx][1]]
-        listOfTimes += [resList2[simIdx][2]]
-
-    # Model 3
-    for simIdx in range(num_sim_model):
-        listOfSummaries += [resList3[simIdx][1]]
-        listOfTimes += [resList3[simIdx][2]]
-
-    # Model 4
-    for simIdx in range(num_sim_model):
-        listOfSummaries += [resList4[simIdx][1]]
-        listOfTimes += [resList4[simIdx][2]]
-
-
-    listOfIsDisc = [resList1[0][3]]
-
-    dfModIndex = pd.DataFrame(modIndex, columns=["modIndex"])
-    dfSummaries = pd.DataFrame(listOfSummaries)
-    dfIsDisc = pd.DataFrame(listOfIsDisc)
-    dfTimes = pd.DataFrame(listOfTimes)
-
-    return dfModIndex, dfSummaries, dfIsDisc, dfTimes
+    return dfModIndex, results['summary'], dfIsDisc, results['time']
 
 
 def BA_ref_table_parallel(num_sim_model, num_nodes, num_cores):

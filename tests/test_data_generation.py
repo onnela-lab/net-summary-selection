@@ -3,7 +3,14 @@ import networkx as nx
 
 
 def test_BA_ref_table():
-    model_index, summaries, is_discrete, times = dg.BA_ref_table(10, 20)
+    num_nodes = 20
+    num_sims_per_model = 10
+    num_sims = 4 * num_sims_per_model
+    model_index, summaries, is_discrete, times = dg.BA_ref_table(num_sims_per_model, num_nodes)
+    assert model_index.shape == (num_sims, 1)
+    assert summaries.shape == (num_sims, 58)
+    assert is_discrete.shape == (1, 58)
+    assert times.shape == (num_sims, 58)
 
 
 def test_DMC_DMR_ref_table():
