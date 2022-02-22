@@ -1,3 +1,4 @@
 -e file:.[tests]
 jupyter
+line_profiler
 snakeviz

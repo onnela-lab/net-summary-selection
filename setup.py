@@ -29,7 +29,8 @@ setuptools.setup(
             'rpy2>=2.9.3',
             'scipy>=1.5.2',
             'seaborn>=0.11.0',
-            'sklearn'
+            'sklearn',
+            'tqdm',
     ],
     extras_require={
         'tests': [
