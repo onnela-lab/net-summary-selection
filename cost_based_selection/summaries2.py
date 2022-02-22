@@ -63,9 +63,6 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
     with results('connected_components', None):
         connected_components = list(nx.connected_components(graph))
 
-    with results('num_of_CC', True, depends_on=['connected_components']):
-        results.value = len(connected_components)
-
     with results('avg_deg_connectivity', False):
         results.value = np.mean(list(nx.average_degree_connectivity(graph).values()))
 

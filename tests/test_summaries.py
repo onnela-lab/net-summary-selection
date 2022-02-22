@@ -42,6 +42,8 @@ def test_equivalence_v1_v2():
         'avg_shortest_path_length_LCC',
         # Wiener index is just a linear rescaling of the average path length.
         'wiener_index_LCC',
+        # We're dropping the number of components because we assume the graph is connected.
+        'num_of_CC',
     }
     extra = set(values2) - set(values1)
 
