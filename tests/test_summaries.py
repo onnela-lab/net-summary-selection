@@ -44,6 +44,8 @@ def test_equivalence_v1_v2():
         'wiener_index_LCC',
         # We're dropping the number of components because we assume the graph is connected.
         'num_of_CC',
+        # Drop number of edges because we already have mean degree.
+        'num_edges',
     }
     extra = set(values2) - set(values1)
 

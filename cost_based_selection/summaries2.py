@@ -57,9 +57,6 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
     assert nx.is_connected(graph), "the graph is not connected"
     results = SummaryResults()
 
-    with results('num_edges', True):
-        results.value = graph.number_of_edges()
-
     with results('connected_components', None):
         connected_components = list(nx.connected_components(graph))
 
