@@ -540,6 +540,7 @@ def dod2array(dod: dict, num_nodes: int, fill_value=np.nan):
 
 
 def _compute_summaries_v2(graph: nx.Graph, return_full_results=False):
+    assert nx.is_connected(graph), "the graph is not connected"
     results = SummaryResults()
 
     with results('num_edges', True):
@@ -558,17 +559,17 @@ def _compute_summaries_v2(graph: nx.Graph, return_full_results=False):
         degrees = np.asarray([d for _, d in graph.degree()])
 
     degree_statistics = {
-        'entropy': ss.entropy,
-        'max': np.max,
-        'median': np.median,
-        'mean': np.mean,
-        'std': np.std,
-        'q025': lambda x: np.quantile(x, 0.25),
-        'q075': lambda x: np.quantile(x, 0.75),
+        'entropy': (False, ss.entropy),
+        'max': (True, np.max),
+        'median': (False, np.median),
+        'mean': (False, np.mean),
+        'std': (False, np.std),
+        'q025': (False, lambda x: np.quantile(x, 0.25)),
+        'q075': (False, lambda x: np.quantile(x, 0.75)),
     }
 
-    for name, func in degree_statistics.items():
-        with results(f'degree_{name}', False, depends_on=['degrees']):
+    for name, (disc, func) in degree_statistics.items():
+        with results(f'degree_{name}', disc, depends_on=['degrees']):
             results.value = func(degrees)
 
     with results('num_triangles', True):

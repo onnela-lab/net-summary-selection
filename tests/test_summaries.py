@@ -7,13 +7,11 @@ import warnings
 def test_equivalence_v1_v2():
     graph1 = nx.barabasi_albert_graph(100, 3)
     graph2 = nx.erdos_renyi_graph(100, .1)
-    graph2 = nx.relabel_nodes(graph2, {u: u + 100 for u in graph2})
+    graph2 = nx.relabel_nodes(graph2, {u: u + 99 for u in graph2})
     graph = nx.compose(graph1, graph2)
 
     values1, times1, discrete1 = summaries._compute_summaries_v1(graph)
     values2, times2, discrete2 = summaries._compute_summaries_v2(graph)
-
-    assert values1['num_of_CC'] == 2
 
     unique_values = {}
     for key, value in values1.items():
@@ -31,6 +29,7 @@ def test_equivalence_v1_v2():
             np.testing.assert_allclose(values1[key], values2[key])
         except AssertionError as ex:
             raise AssertionError(key) from ex
+        assert discrete1[key] == discrete2[key], key
 
     missing = set(values1) - set(values2) - {
         # We already enumerate all the cliques so using an approximation is not necessary.
