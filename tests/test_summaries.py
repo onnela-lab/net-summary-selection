@@ -1,4 +1,5 @@
-from cost_based_selection import summaries
+from cost_based_selection.summaries import compute_summaries as compute_summaries_v1
+from cost_based_selection.summaries2 import compute_summaries as compute_summaries_v2
 import networkx as nx
 import numpy as np
 import warnings
@@ -10,8 +11,8 @@ def test_equivalence_v1_v2():
     graph2 = nx.relabel_nodes(graph2, {u: u + 99 for u in graph2})
     graph = nx.compose(graph1, graph2)
 
-    values1, times1, discrete1 = summaries._compute_summaries_v1(graph)
-    values2, times2, discrete2 = summaries._compute_summaries_v2(graph)
+    values1, times1, discrete1 = compute_summaries_v1(graph)
+    values2, times2, discrete2 = compute_summaries_v2(graph)
 
     unique_values = {}
     for key, value in values1.items():
