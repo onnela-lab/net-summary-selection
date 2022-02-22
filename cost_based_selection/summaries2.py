@@ -57,9 +57,6 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
     assert nx.is_connected(graph), "the graph is not connected"
     results = SummaryResults()
 
-    with results('connected_components', None):
-        connected_components = list(nx.connected_components(graph))
-
     with results('avg_deg_connectivity', False):
         results.value = np.mean(list(nx.average_degree_connectivity(graph).values()))
 
@@ -159,11 +156,11 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
     # Shortest path lengths.
     with results('shortest_paths', None):
         shortest_paths = dict(nx.shortest_path_length(graph))
-        shortest_paths = dod2array(shortest_paths, graph.number_of_nodes(), np.inf)
+        shortest_paths_numpy = dod2array(shortest_paths, graph.number_of_nodes(), np.inf)
 
     for length in [3, 4, 5, 6]:
         with results(f'num_shortest_{length}paths', True, depends_on=['shortest_paths']):
-            results.value = np.sum(shortest_paths == length) / 2
+            results.value = np.sum(shortest_paths_numpy == length) / 2
 
     with results('size_min_node_dom_set', True):
         results.value = len(nx.approximation.min_weighted_dominating_set(graph))
@@ -172,47 +169,28 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
         results.value = len(nx.approximation.min_edge_dominating_set(graph)) * 2
 
     with results('avg_global_efficiency', False, depends_on=['shortest_paths']):
-        results.value = np.mean(1 / shortest_paths[shortest_paths > 0])
+        results.value = np.mean(1 / shortest_paths_numpy[shortest_paths_numpy > 0])
 
-    # Statistics just on the largest connected component.
-    with results('largest_connected_component', None, depends_on=['connected_components']):
-        nodes = max(connected_components, key=len)
-        # We `copy` to avoid having the inefficient SubGraphView.
-        largest_connected_component: nx.Graph = graph.subgraph(nodes).copy()
+    with results('eccentricities', None, depends_on=['shortest_paths']):
+        eccentricities = nx.eccentricity(graph, sp=shortest_paths)
 
-    with results('num_nodes_LCC', True, depends_on=['largest_connected_component']):
-        results.value = largest_connected_component.number_of_nodes()
-
-    with results('num_edges_LCC', True, depends_on=['largest_connected_component']):
-        results.value = largest_connected_component.number_of_edges()
-
-    with results('lcc_shortest_paths', None, depends_on=['largest_connected_component']):
-        lcc_shortest_paths = dict(nx.shortest_path_length(largest_connected_component))
-
-    with results('lcc_eccentricities', None):
-        eccentricities = nx.eccentricity(largest_connected_component, sp=lcc_shortest_paths)
-
-    with results('diameter_LCC', True, depends_on=['lcc_eccentricities']):
+    with results('diameter', True, depends_on=['eccentricities']):
         results.value = nx.diameter(None, eccentricities)
 
-    with results('avg_geodesic_dist_LCC', False, depends_on=['lcc_shortest_paths']):
+    with results('avg_geodesic_dist', False, depends_on=['shortest_paths']):
         results.value = np.mean([
-            length for source, lengths in lcc_shortest_paths.items()
+            length for source, lengths in shortest_paths.items()
             for target, length in lengths.items() if source != target
         ])
 
-    with results('avg_deg_connectivity_LCC', False, depends_on=['largest_connected_component']):
-        connectivity = nx.average_degree_connectivity(largest_connected_component)
-        results.value = np.mean(list(connectivity.values()))
+    with results('avg_local_efficiency', False):
+        results.value = nx.local_efficiency(graph)
 
-    with results('avg_local_efficiency_LCC', False, depends_on=['largest_connected_component']):
-        results.value = nx.local_efficiency(largest_connected_component)
+    with results('node_connectivity', True):
+        results.value = nx.node_connectivity(graph)
 
-    with results('node_connectivity_LCC', True, depends_on=['largest_connected_component']):
-        results.value = nx.node_connectivity(largest_connected_component)
-
-    with results('edge_connectivity_LCC', True, depends_on=['largest_connected_component']):
-        results.value = nx.edge_connectivity(largest_connected_component)
+    with results('edge_connectivity_LCC', True):
+        results.value = nx.edge_connectivity(graph)
 
     # Generate random noise.
     rvs = {

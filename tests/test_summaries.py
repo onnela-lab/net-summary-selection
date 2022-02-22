@@ -46,10 +46,27 @@ def test_equivalence_v1_v2():
         'num_of_CC',
         # Drop number of edges because we already have mean degree.
         'num_edges',
+        # These are all duplicate statistics assuming the graph is connected.
+        'avg_deg_connectivity_LCC',
+        'avg_geodesic_dist_LCC',
+        'avg_local_efficiency_LCC',
+        'diameter_LCC',
+        'node_connectivity_LCC',
+        'num_edges_LCC',
+        'num_nodes_LCC'
     }
-    extra = set(values2) - set(values1)
+    extra = set(values2) - set(values1) - {
+        # These have been renamed by dropping "LCC".
+        'avg_geodesic_dist',
+        'avg_local_efficiency',
+        'diameter',
+        'node_connectivity',
+    }
 
     # Numerically verify most of the claims above.
+    for key in {'avg_geodesic_dist', 'avg_local_efficiency', 'diameter', 'node_connectivity',
+                'avg_deg_connectivity'}:
+        np.testing.assert_allclose(values2[key], values1[f'{key}_LCC'])
     np.testing.assert_allclose(values1['avg_global_efficiency'], values1['harmonic_mean'])
     np.testing.assert_allclose(values1['avg_geodesic_dist_LCC'],
                                values1['avg_shortest_path_length_LCC'])
