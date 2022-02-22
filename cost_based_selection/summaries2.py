@@ -29,6 +29,11 @@ class SummaryResults:
         end = time.time()
         if self._current_key is None:
             raise RuntimeError
+        # Demand a value if we have set discrete to False or True. Demand no value if None.
+        if self._current['is_discrete'] is None:
+            assert 'value' not in self._current
+        else:
+            assert 'value' in self._current
         self._current['end'] = end
         self._current['duration'] = end - self._current['start']
         self._current['time'] = self._current['duration'] \
@@ -155,12 +160,14 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
 
     # Shortest path lengths.
     with results('shortest_paths', None):
-        shortest_paths = dict(nx.shortest_path_length(graph))
-        shortest_paths_numpy = dod2array(shortest_paths, graph.number_of_nodes(), np.inf)
+        shortest_paths = dict(nx.all_pairs_shortest_path(graph))
+        shortest_path_lengths = {u: {v: len(p) - 1 for v, p in x.items()}
+                                 for u, x in shortest_paths.items()}
+        shortest_path_lengths_np = dod2array(shortest_path_lengths, graph.number_of_nodes(), np.inf)
 
     for length in [3, 4, 5, 6]:
         with results(f'num_shortest_{length}paths', True, depends_on=['shortest_paths']):
-            results.value = np.sum(shortest_paths_numpy == length) / 2
+            results.value = np.sum(shortest_path_lengths_np == length) / 2
 
     with results('size_min_node_dom_set', True):
         results.value = len(nx.approximation.min_weighted_dominating_set(graph))
@@ -169,17 +176,17 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
         results.value = len(nx.approximation.min_edge_dominating_set(graph)) * 2
 
     with results('avg_global_efficiency', False, depends_on=['shortest_paths']):
-        results.value = np.mean(1 / shortest_paths_numpy[shortest_paths_numpy > 0])
+        results.value = np.mean(1 / shortest_path_lengths_np[shortest_path_lengths_np > 0])
 
     with results('eccentricities', None, depends_on=['shortest_paths']):
-        eccentricities = nx.eccentricity(graph, sp=shortest_paths)
+        eccentricities = nx.eccentricity(graph, sp=shortest_path_lengths)
 
     with results('diameter', True, depends_on=['eccentricities']):
         results.value = nx.diameter(None, eccentricities)
 
     with results('avg_geodesic_dist', False, depends_on=['shortest_paths']):
         results.value = np.mean([
-            length for source, lengths in shortest_paths.items()
+            length for source, lengths in shortest_path_lengths.items()
             for target, length in lengths.items() if source != target
         ])
 
