@@ -7,8 +7,8 @@ import warnings
 
 def test_equivalence_v1_v2():
     graph1 = nx.barabasi_albert_graph(100, 3)
-    graph2 = nx.erdos_renyi_graph(100, .1)
-    graph2 = nx.relabel_nodes(graph2, {u: u + 99 for u in graph2})
+    graph2 = nx.erdos_renyi_graph(101, .1)
+    graph2 = nx.relabel_nodes(graph2, {u: u + 100 for u in graph2})
     graph = nx.compose(graph1, graph2)
 
     values1, times1, discrete1 = compute_summaries_v1(graph)
@@ -42,33 +42,12 @@ def test_equivalence_v1_v2():
         'avg_shortest_path_length_LCC',
         # Wiener index is just a linear rescaling of the average path length.
         'wiener_index_LCC',
-        # We're dropping the number of components because we assume the graph is connected.
-        'num_of_CC',
         # Drop number of edges because we already have mean degree.
         'num_edges',
-        # These are all duplicate statistics assuming the graph is connected.
-        'avg_deg_connectivity_LCC',
-        'avg_geodesic_dist_LCC',
-        'avg_local_efficiency_LCC',
-        'diameter_LCC',
-        'node_connectivity_LCC',
-        'edge_connectivity_LCC',
-        'num_edges_LCC',
-        'num_nodes_LCC'
     }
-    extra = set(values2) - set(values1) - {
-        # These have been renamed by dropping "LCC".
-        'avg_geodesic_dist',
-        'avg_local_efficiency',
-        'diameter',
-        'node_connectivity',
-        'edge_connectivity',
-    }
+    extra = set(values2) - set(values1)
 
     # Numerically verify most of the claims above.
-    for key in {'avg_geodesic_dist', 'avg_local_efficiency', 'diameter', 'node_connectivity',
-                'avg_deg_connectivity', 'edge_connectivity'}:
-        np.testing.assert_allclose(values2[key], values1[f'{key}_LCC'])
     np.testing.assert_allclose(values1['avg_global_efficiency'], values1['harmonic_mean'])
     np.testing.assert_allclose(values1['avg_geodesic_dist_LCC'],
                                values1['avg_shortest_path_length_LCC'])
