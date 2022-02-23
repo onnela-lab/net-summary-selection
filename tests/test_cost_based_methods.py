@@ -40,9 +40,6 @@ def data_dict():
     cost_based_methods.weighted_rf_importance,
 ])
 def test_method(data_dict: dict, method):
-    # Remove `is_disc` for methods that don't accept the argument.
-    if method in {cost_based_methods.reliefF, cost_based_methods.pen_rf_importance,
-                  cost_based_methods.weighted_rf_importance}:
-        data_dict = data_dict.copy()
-        del data_dict['is_disc']
-    method(**data_dict, cost_param=1)
+    result = method(**data_dict, cost_param=1)
+    ranking, *_ = result
+    np.testing.assert_array_equal(np.unique(ranking), np.arange(len(ranking)))

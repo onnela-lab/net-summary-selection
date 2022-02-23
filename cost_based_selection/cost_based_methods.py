@@ -539,7 +539,7 @@ def JMIM(X, y, is_disc, cost_vec = None, cost_param = 0,
 
 def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_features_to_select = None,
             proximity = "distance", min_samples_leaf = 100, n_estimators = 500,
-            sim_matrix = None):
+            sim_matrix = None, is_disc=None):
     """ Cost-based feature ranking adaptation of the ReliefF algorithm.
 
     Cost-based adaptation of the ReliefF algorithm, where the nearest neighbors
@@ -749,7 +749,7 @@ def _private_proximity_matrix(model, X, normalize=True):
 
 def pen_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_select = None,
                       imp_type = "impurity", min_samples_leaf = 1,
-                      n_estimators = 500, rf_importance_vec = None):
+                      n_estimators = 500, rf_importance_vec = None, is_disc=None):
     """ Cost-based feature ranking with penalized random forest importance.
 
     The cost-based ranking of the features are deduced by penalizing the
@@ -864,7 +864,7 @@ def pen_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_sel
 
 def weighted_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_select = None,
                            imp_type = "impurity", min_samples_leaf = 1,
-                           n_estimators = 500):
+                           n_estimators = 500, is_disc=None):
     """ Cost-based feature ranking using weighted random forest importance.
 
     The cost-based ranking of the features are deduced using the feature
@@ -900,7 +900,6 @@ def weighted_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_t
         ranking (list):
             a list containing the indices of the ranked features as
             specified in X, in decreasing order of importance.
-
     """
 
     nCov = X.shape[1]
@@ -958,7 +957,7 @@ def weighted_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_t
     ranking = np.argsort(-weighted_rf_importance)[:num_features_to_select]
     ranking = ranking.tolist()
 
-    return ranking
+    return (ranking,)
 
 
 def multi_mRMR(X, y, is_disc, cost_vec, cost_param_vec,
@@ -1002,9 +1001,7 @@ def multi_mRMR(X, y, is_disc, cost_vec, cost_param_vec,
             a pandas DataFrame that contains in each row, a penalization
             parameter value and the corresponding ranking indexes, in decreasing
             order of importance.
-
     """
-
     MI_matrix = None
     grid_size = len(cost_param_vec)
     nCov = X.shape[1]
@@ -1076,7 +1073,6 @@ def multi_JMI(X, y, is_disc, cost_vec, cost_param_vec,
             a pandas DataFrame that contains in each row, a penalization
             parameter value and the corresponding ranking indexes, in decreasing
             order of importance.
-
     """
 
     MI_matrix = None
@@ -1152,7 +1148,6 @@ def multi_JMIM(X, y, is_disc, cost_vec, cost_param_vec,
             a pandas DataFrame that contains in each row, a penalization
             parameter value and the corresponding ranking indexes, in decreasing
             order of importance.
-
     """
 
     MI_matrix = None
@@ -1232,7 +1227,6 @@ def multi_reliefF(X, y, cost_vec, cost_param_vec, num_neighbors = 10, num_featur
             a pandas DataFrame that contains in each row, a penalization
             parameter value and the corresponding ranking indexes, in decreasing
             order of importance.
-
     """
 
     sim_matrix = None
@@ -1305,9 +1299,7 @@ def multi_pen_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to_sele
             a pandas DataFrame that contains in each row, a penalization
             parameter value and the corresponding ranking indexes, in decreasing
             order of importance.
-
     """
-
     unpenalized_rf_importance = None
     grid_size = len(cost_param_vec)
     nCov = X.shape[1]
