@@ -16,7 +16,7 @@ class SummaryResults:
         self._current = None
         self._current_key = None
 
-    def __call__(self, key: str, is_discrete: bool, depends_on: typing[str] = None) \
+    def __call__(self, key: str, is_discrete: bool, depends_on: typing.Iterable[str] = None) \
             -> 'SummaryResults':
         """
         Start a context for evaluating a statistic.
@@ -81,7 +81,8 @@ def dod2array(dod: dict, num_nodes: int, fill_value: float = np.nan) -> np.ndarr
     return array
 
 
-def compute_summaries(graph: nx.Graph, return_full_results=False):
+def compute_summaries(graph: nx.Graph, return_full_results: bool = False,
+                      include_connectivity: bool = False):
     """
     Compute summary statistics.
 
@@ -89,6 +90,8 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
         graph: Graph to compute summary statistics for.
         return_full_results: Return the `SummaryResults` object instead of collapsing into a
             dictionary.
+        include_connectivity: Whether to include edge and node connectivity, two very expensive
+            summary statistics.
     """
     assert nx.is_connected(graph), "the graph is not connected"
     results = SummaryResults()
@@ -224,11 +227,12 @@ def compute_summaries(graph: nx.Graph, return_full_results=False):
     with results('avg_local_efficiency', False):
         results.value = nx.local_efficiency(graph)
 
-    with results('node_connectivity', True):
-        results.value = nx.node_connectivity(graph)
+    if include_connectivity:
+        with results('node_connectivity', True):
+            results.value = nx.node_connectivity(graph)
 
-    with results('edge_connectivity_LCC', True):
-        results.value = nx.edge_connectivity(graph)
+        with results('edge_connectivity', True):
+            results.value = nx.edge_connectivity(graph)
 
     # Generate random noise.
     rvs = {

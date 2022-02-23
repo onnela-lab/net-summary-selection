@@ -12,7 +12,7 @@ def test_equivalence_v1_v2():
     graph = nx.compose(graph1, graph2)
 
     values1, times1, discrete1 = compute_summaries_v1(graph)
-    values2, times2, discrete2 = compute_summaries_v2(graph)
+    values2, times2, discrete2 = compute_summaries_v2(graph, include_connectivity=True)
 
     unique_values = {}
     for key, value in values1.items():
@@ -52,6 +52,7 @@ def test_equivalence_v1_v2():
         'avg_local_efficiency_LCC',
         'diameter_LCC',
         'node_connectivity_LCC',
+        'edge_connectivity_LCC',
         'num_edges_LCC',
         'num_nodes_LCC'
     }
@@ -61,11 +62,12 @@ def test_equivalence_v1_v2():
         'avg_local_efficiency',
         'diameter',
         'node_connectivity',
+        'edge_connectivity',
     }
 
     # Numerically verify most of the claims above.
     for key in {'avg_geodesic_dist', 'avg_local_efficiency', 'diameter', 'node_connectivity',
-                'avg_deg_connectivity'}:
+                'avg_deg_connectivity', 'edge_connectivity'}:
         np.testing.assert_allclose(values2[key], values1[f'{key}_LCC'])
     np.testing.assert_allclose(values1['avg_global_efficiency'], values1['harmonic_mean'])
     np.testing.assert_allclose(values1['avg_geodesic_dist_LCC'],
