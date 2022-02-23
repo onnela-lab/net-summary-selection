@@ -2,15 +2,31 @@ import time
 import numpy as np
 import networkx as nx
 from scipy import stats
+import typing
 
 
 class SummaryResults:
+    """
+    Container for storing summary statistics, including timings. Supports amortizing compute cost
+    across different summary statistics at runtime while keeping track of the time had the
+    statistics been evaluated independently.
+    """
     def __init__(self) -> None:
         self.results = {}
         self._current = None
         self._current_key = None
 
-    def __call__(self, key, is_discrete, depends_on=None):
+    def __call__(self, key: str, is_discrete: bool, depends_on: typing[str] = None) \
+            -> 'SummaryResults':
+        """
+        Start a context for evaluating a statistic.
+
+        Args:
+            key: Name of the summary statistic.
+            is_discrete: Whether the statistic is discrete or continuous.
+            depends_on: Optional list of statistic names this statistic depends on. Compute times
+                of the dependencies will be added.
+        """
         if key in self.results:
             raise RuntimeError
         if self._current_key:
@@ -50,7 +66,14 @@ class SummaryResults:
         self._current['value'] = value
 
 
-def dod2array(dod: dict, num_nodes: int, fill_value=np.nan):
+def dod2array(dod: dict, num_nodes: int, fill_value: float = np.nan) -> np.ndarray:
+    """
+    Convert a dictionary of dictionaries to a numpy array.
+
+    dod: Dictionary of dictionaries of values.
+    num_nodes: Number of nodes in the network.
+    fill_value: Default value if a value is missing in the dictionary of dictionaries.
+    """
     array = fill_value * np.ones((num_nodes, num_nodes))
     for i, other in dod.items():
         for j, value in other.items():
@@ -59,6 +82,14 @@ def dod2array(dod: dict, num_nodes: int, fill_value=np.nan):
 
 
 def compute_summaries(graph: nx.Graph, return_full_results=False):
+    """
+    Compute summary statistics.
+
+    Args:
+        graph: Graph to compute summary statistics for.
+        return_full_results: Return the `SummaryResults` object instead of collapsing into a
+            dictionary.
+    """
     assert nx.is_connected(graph), "the graph is not connected"
     results = SummaryResults()
 
