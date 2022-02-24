@@ -22,16 +22,16 @@ import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.feature_selection import mutual_info_regression
-from sklearn.ensemble import  RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 # To use the R package ranger for RF importance computation
 import rpy2.robjects
 
 
-def mRMR(X, y, is_disc, cost_vec = None, cost_param = 0,
-         num_features_to_select = None, random_seed = 123, num_cores = 1,
-         MI_matrix = None):
-    """ Cost-based feature ranking with maximum relevance minimum redundancy.
+def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
+         num_cores=1, MI_matrix=None):
+    """
+    Cost-based feature ranking with maximum relevance minimum redundancy.
 
     Cost-based adaptation of the filter feature selection algorithm Maximal-
     Relevance-Minimal-Redundancy (mRMR, Peng et al. (2005)).
@@ -77,14 +77,11 @@ def mRMR(X, y, is_disc, cost_vec = None, cost_param = 0,
             the matrix of precomputed MI between pairs of features.
 
     """
-
     num_features = X.shape[1]
 
-    if (cost_vec is None):
+    if cost_vec is None:
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(num_features)
-    #else:
-    #    cost_vec=np.array(cost_vec)
 
     # Check on num_features_to_select
     if (num_features_to_select is not None):
@@ -99,7 +96,7 @@ def mRMR(X, y, is_disc, cost_vec = None, cost_param = 0,
     # convert it into a continuous one
     # (to handle errors with the MI computation function)
     for featIdx in range(num_features):
-        if is_disc[featIdx]==True and len(np.unique(X[:,featIdx])) == X.shape[0]:
+        if is_disc[featIdx] and len(np.unique(X[:, featIdx])) == X.shape[0]:
             is_disc[featIdx] = False
 
     # Computing all the MIs I(X_j; y)
@@ -110,23 +107,27 @@ def mRMR(X, y, is_disc, cost_vec = None, cost_param = 0,
     if MI_matrix is None:
         # Compute all the pairwise mutual info depending on if the feature
         # is discrete or continuous
-        matrix_MI = np.zeros( (num_features, num_features), dtype=float)
+        matrix_MI = np.zeros((num_features, num_features), dtype=float)
 
         for ii in range(num_features):
-            if num_cores==1:
-                if is_disc[ii] == True: # If the ii-th feature is discrete
+            if num_cores == 1:
+                if is_disc[ii]:  # If the ii-th feature is discrete
                     # we use the classif version
-                    matrix_MI[ii,:] = mutual_info_classif(X, X[:,ii], discrete_features=is_disc, random_state=random_seed)
-                elif is_disc[ii] == False:
+                    matrix_MI[ii, :] = mutual_info_classif(X, X[:, ii], discrete_features=is_disc,
+                                                           random_state=random_seed)
+                else:
                     # otherwise we use the continuous (regression) version
-                    matrix_MI[ii,:] = mutual_info_regression(X, X[:,ii], discrete_features=is_disc, random_state=random_seed)
-
+                    matrix_MI[ii, :] = mutual_info_regression(
+                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
             else:
-                 if is_disc[ii] == True:
-                     matrix_MI[ii,:] = Parallel(n_jobs=num_cores)(delayed(mutual_info_classif)(X[:,k].reshape(-1,1), X[:,ii], discrete_features=is_disc[k], random_state=random_seed) for k in range(num_features) )
-                 elif is_disc[ii] == False:
-                     matrix_MI[ii,:] = Parallel(n_jobs=num_cores)(delayed(mutual_info_regression)(X[:,k].reshape(-1,1), X[:,ii], discrete_features=is_disc[k], random_state=random_seed) for k in range(num_features) )
-
+                if is_disc[ii]:
+                    matrix_MI[ii, :] = Parallel(n_jobs=num_cores)(delayed(mutual_info_classif)(
+                        X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
+                        random_state=random_seed) for k in range(num_features))
+                else:
+                    matrix_MI[ii, :] = Parallel(n_jobs=num_cores)(delayed(mutual_info_regression)(
+                        X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
+                        random_state=random_seed) for k in range(num_features))
     else:
         matrix_MI = MI_matrix
 
@@ -139,12 +140,12 @@ def mRMR(X, y, is_disc, cost_vec = None, cost_param = 0,
     unRanked.pop(selected)
 
     # Until we have the desired number of selected_features, we apply the selection criterion
-    for k in range(1,num_selected_features):
+    for k in range(1, num_selected_features):
 
         featureRel = []
         # Compute the criterion to maximize for each unranked covariate
         for idx in unRanked:
-                featureRel.append( initial_scores_mcost[idx] - np.mean(matrix_MI[ranking,idx]) )
+            featureRel.append(initial_scores_mcost[idx] - np.mean(matrix_MI[ranking, idx]))
 
         tmp_idx = np.argmax(featureRel)
         ranking.append(unRanked[tmp_idx])
@@ -153,9 +154,8 @@ def mRMR(X, y, is_disc, cost_vec = None, cost_param = 0,
     return ranking, matrix_MI
 
 
-def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
-        num_features_to_select = None, random_seed = 123, num_cores = 1,
-        MI_matrix = None, MI_conditional = None):
+def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
+        num_cores=1, MI_matrix=None, MI_conditional=None):
     """ Cost-based feature ranking based on Joint Mutual Information.
 
     Cost-based adaptation of the filter feature selection algorithm based on
@@ -211,19 +211,16 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
             pairwise MI between features, conditioned to the response values.
             Each key is a response modality, and each value is a conditional
             MI matrix between features I(X_i,X_j | y=key).
-
     """
 
     num_features = X.shape[1]
 
-    if (cost_vec is None):
+    if cost_vec is None:
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(num_features)
-    #else:
-    #    cost_vec=np.array(cost_vec)
 
     # Check on num_features_to_select
-    if (num_features_to_select is not None):
+    if num_features_to_select is not None:
         num_selected_features = min(num_features, num_features_to_select)
     else:
         num_selected_features = num_features
@@ -235,7 +232,7 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
     # convert it into a continuous one
     # (to handle errors with the MI computation function)
     for featIdx in range(num_features):
-        if is_disc[featIdx]==True and len(np.unique(X[:,featIdx])) == X.shape[0]:
+        if is_disc[featIdx] and len(np.unique(X[:, featIdx])) == X.shape[0]:
             is_disc[featIdx] = False
 
     # Computing all the MIs I(X_j; y)
@@ -247,26 +244,33 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
     if MI_matrix is None:
         # Compute all the pairwise mutual info depending on if the feature
         # is discrete or continuous
-        matrix_MI_Xk_Xj = np.zeros( (num_features, num_features), dtype=float)
+        matrix_MI_Xk_Xj = np.zeros((num_features, num_features), dtype=float)
 
         for ii in range(num_features):
             if num_cores == 1:
-                if is_disc[ii] == True: # If the ii-th feature is discrete
+                if is_disc[ii]:  # If the ii-th feature is discrete
                     # we use the classif version
-                    matrix_MI_Xk_Xj[ii,:] = mutual_info_classif(X, X[:,ii], discrete_features=is_disc, random_state = random_seed)
-                elif is_disc[ii] == False:
+                    matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
+                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
+                else:
                     # otherwise we use the continuous (regression) version
-                    matrix_MI_Xk_Xj[ii,:] = mutual_info_regression(X, X[:,ii], discrete_features = is_disc, random_state = random_seed)
+                    matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
+                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
 
             else:
-                 if is_disc[ii] == True:
-                     matrix_MI_Xk_Xj[ii,:] = Parallel(n_jobs = num_cores)( delayed(mutual_info_classif)(X[:,k].reshape(-1,1), X[:,ii], discrete_features = is_disc[k], random_state = random_seed) for k in range(num_features) )
-                 elif is_disc[ii] == False:
-                     matrix_MI_Xk_Xj[ii,:] = Parallel(n_jobs = num_cores)( delayed(mutual_info_regression)(X[:,k].reshape(-1,1), X[:,ii], discrete_features = is_disc[k], random_state = random_seed) for k in range(num_features) )
+                if is_disc[ii]:
+                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
+                        delayed(mutual_info_classif)(
+                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
+                            random_state=random_seed) for k in range(num_features))
+                else:
+                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
+                        delayed(mutual_info_regression)(
+                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
+                            random_state=random_seed) for k in range(num_features))
 
     else:
         matrix_MI_Xk_Xj = MI_matrix
-
 
     # For the Joint mutual information, we also need to compute the matrices
     # I(Xk, Xj | Y=y) for y in Y
@@ -285,33 +289,43 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
         for valY in yModalities:
 
             # Initialize a new matrix
-            matTmp = np.zeros( (num_features, num_features), dtype=float)
+            matTmp = np.zeros((num_features, num_features), dtype=float)
             # Extract the rows of X with this modality of Y
-            subX = X[y==valY,]
+            subX = X[y == valY]
 
             # proportion of this modality
-            proValY = np.mean(y==valY)
+            proValY = np.mean(y == valY)
 
             is_discForSubX = copy.deepcopy(is_disc)
             for featIdx in range(num_features):
-                if is_disc[featIdx] == True and len(np.unique(subX[:,featIdx])) == subX.shape[0]:
+                if is_disc[featIdx] and len(np.unique(subX[:, featIdx])) == subX.shape[0]:
                     is_discForSubX[featIdx] = False
 
             # Fill the matrix
             for ii in range(num_features):
-                if num_cores==1:
-                    if is_discForSubX[ii] == True:
-                        matTmp[ii,:] = proValY * mutual_info_classif(subX, subX[:,ii], discrete_features = is_discForSubX, random_state = random_seed)
-                    elif is_discForSubX[ii] == False:
-                        matTmp[ii,:] = proValY * mutual_info_regression(subX, subX[:,ii], discrete_features = is_discForSubX, random_state = random_seed)
+                if num_cores == 1:
+                    if is_discForSubX[ii]:
+                        matTmp[ii, :] = proValY * mutual_info_classif(
+                            subX, subX[:, ii], discrete_features=is_discForSubX,
+                            random_state=random_seed)
+                    else:
+                        matTmp[ii, :] = proValY * mutual_info_regression(
+                            subX, subX[:, ii], discrete_features=is_discForSubX,
+                            random_state=random_seed)
 
                 else:
-                     if is_discForSubX[ii] == True:
-                         vecToMultiply = Parallel(n_jobs=num_cores)( delayed(mutual_info_classif)(subX[:,k].reshape(-1,1), subX[:,ii], discrete_features = is_discForSubX[k], random_state = random_seed) for k in range(num_features) )
-                         matTmp[ii,:] = [proValY * val for val in vecToMultiply]
-                     elif is_discForSubX[ii] == False:
-                         vecToMultiply = Parallel(n_jobs=num_cores)( delayed(mutual_info_regression)(subX[:,k].reshape(-1,1), subX[:,ii], discrete_features = is_discForSubX[k], random_state = random_seed) for k in range(num_features) )
-                         matTmp[ii,:] = [proValY * val for val in vecToMultiply]
+                    if is_discForSubX[ii]:
+                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_classif)(
+                            subX[:, k].reshape(-1, 1), subX[:, ii],
+                            discrete_features=is_discForSubX[k], random_state=random_seed
+                        ) for k in range(num_features))
+                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
+                    else:
+                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_regression)(
+                            subX[:, k].reshape(-1, 1), subX[:, ii],
+                            discrete_features=is_discForSubX[k], random_state=random_seed
+                        ) for k in range(num_features))
+                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
 
             MI_condY[valY] = matTmp
 
@@ -321,13 +335,13 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
     # ranking contains the indices of the final ranking in decreasing order of importance
     ranking = []
 
-    ### The first selected feature is the one with the maximal penalized I(X_j, Y) value
+    # The first selected feature is the one with the maximal penalized I(X_j, Y) value
     selected = np.argmax(initial_scores_mcost)
     ranking.append(selected)
     unRanked.pop(selected)
 
     # Until we have the desired number of selected_features, we apply the selection criterion
-    for k in range(1,num_selected_features):
+    for k in range(1, num_selected_features):
 
         featureRel = []
         # Compute the criterion to maximize for each unranked covariate
@@ -335,9 +349,10 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
             vecSummed = np.zeros(len(ranking))
             for valY in yModalities:
                 # Compute I(Xk; Xj | Y)
-                vecSummed += MI_condY[valY][ranking,idx]
+                vecSummed += MI_condY[valY][ranking, idx]
 
-            criterionVal = initial_scores_mcost[idx] - np.mean(matrix_MI_Xk_Xj[ranking,idx]) + np.mean(vecSummed)
+            criterionVal = initial_scores_mcost[idx] - np.mean(matrix_MI_Xk_Xj[ranking, idx]) \
+                + np.mean(vecSummed)
 
             featureRel.append(criterionVal)
 
@@ -348,9 +363,9 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
     return ranking, matrix_MI_Xk_Xj, MI_condY
 
 
-def JMIM(X, y, is_disc, cost_vec = None, cost_param = 0,
-         num_features_to_select = None, random_seed = 123, num_cores = 1,
-         MI_matrix = None, MI_conditional = None):
+def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
+         num_features_to_select=None, random_seed=123, num_cores=1,
+         MI_matrix=None, MI_conditional=None):
     """ Cost-based feature ranking based on Joint Mutual Information Maximization.
 
     Cost-based adaptation of the filter feature selection algorithm based on
@@ -548,7 +563,7 @@ def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_featu
 
     I. Kononenko. Estimating attributes: Analysis and extensions of relief.
     In F. Bergadano and L. De Raedt, editors, Machine Learning: ECML-94,
-    pages 171–182, Berlin, Heidelberg, 1994. Springer Berlin Heidelberg.
+    pages 171--182, Berlin, Heidelberg, 1994. Springer Berlin Heidelberg.
 
     Args:
         X (numpy.ndarray):
