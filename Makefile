@@ -62,3 +62,21 @@ ${SIMULATIONS_models} : ${SIMULATION_ROOT}/% : $$(addprefix $$@/,${SPLITS})
 ${SIMULATIONS_models_splits} : ${SIMULATION_ROOT}/% : \
 	$$(addprefix $$@/,$${BATCH_INDICES_$$(call wordx,$$*,2,/):=.pkl})
 
+
+# Ranking
+# =======
+
+METHODS = JMI JMIM mRMR reliefF pen_rf_importance weighted_rf_importance
+PENALTIES = 0.0 0.0125 0.025 0.05 0.1 0.2 0.4 0.8 1.6 3.2 6.4 12.8 25.6 51.2
+RANKING_ROOT = workspace/rankings
+RANKING_TARGETS_models = $(addprefix ${RANKING_ROOT}/,${MODELS})
+RANKING_TARGETS_models_methods = $(foreach m,${RANKING_TARGETS_models},$(foreach k,${METHODS},${m}/${k}))
+RANKING_TARGETS = $(foreach mk,${RANKING_TARGETS_models_methods},$(foreach p,${PENALTIES},${mk}/${p}.pkl))
+
+${RANKING_ROOT} : $(addprefix ${RANKING_ROOT}/,${MODELS})
+${RANKING_TARGETS_models} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${METHODS})
+${RANKING_TARGETS_models_methods} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${PENALTIES:=.pkl})
+
+${RANKING_TARGETS} : ${RANKING_ROOT}/%.pkl : scripts/rank_features.py $${SIMULATIONS_$$(call wordx,$$*,1,/)_train}
+	NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python $< --penalty=$(call wordx,$*,3,/) \
+		$(call wordx,$*,2,/) $@ $(filter-out $<,$^)
