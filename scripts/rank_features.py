@@ -9,12 +9,19 @@ import time
 logging.basicConfig(level='INFO')
 
 
+METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR', 'reliefF']}
+for key in ['pen_rf_importance', 'weighted_rf_importance']:
+    for implementation in ['impurity', 'permutation']:
+        METHODS[f'{key}_implementation'] = lambda *args, **kwargs: getattr(cost_based_methods, key)(
+            *args, **kwargs, imp_type=implementation,
+        )
+
+
 def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument('--penalty', help='penalty factor for costly features', type=float,
                         default=0)
-    parser.add_argument('method', help='method to use for ranking features', choices=[
-        'JMI', 'JMIM', 'mRMR', 'reliefF', 'pen_rf_importance', 'weighted_rf_importance'])
+    parser.add_argument('method', help='method to use for ranking features', choices=METHODS)
     parser.add_argument('output', help='output path for the reference table')
     parser.add_argument('filenames', help='simulation files to load', nargs='+')
     args = parser.parse_args()
