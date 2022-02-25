@@ -809,8 +809,11 @@ def pen_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_sel
             when implementing a version with multiple cost_parameter values.
 
     """
-
     nCov = X.shape[1]
+
+    # Coerce to integers if we've got strings.
+    if y.dtype.kind in 'US':
+        _, y = np.unique(y, return_inverse=True)
 
     if imp_type not in ['impurity', 'permutation']:
         raise ValueError("The argument imp_type must be either 'impurity' or 'permutation'.")
@@ -877,7 +880,7 @@ def pen_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_sel
     return ranking, unpenalized_rf_importance
 
 
-def weighted_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_select = None,
+def weighted_rf_importance(X, y: np.ndarray, cost_vec = None, cost_param = 0, num_features_to_select = None,
                            imp_type = "impurity", min_samples_leaf = 1,
                            n_estimators = 500, is_disc=None):
     """ Cost-based feature ranking using weighted random forest importance.
@@ -918,6 +921,10 @@ def weighted_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_t
     """
 
     nCov = X.shape[1]
+
+    # Coerce to integers if we've got strings.
+    if y.dtype.kind in 'US':
+        _, y = np.unique(y, return_inverse=True)
 
     if imp_type not in ['impurity', 'permutation']:
         raise ValueError("The argument imp_type must be either 'impurity' or 'permutation'.")
