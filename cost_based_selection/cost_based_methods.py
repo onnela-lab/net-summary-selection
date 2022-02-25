@@ -835,6 +835,7 @@ def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=
     nCov = X.shape[1]
 
     # Coerce to integers if we've got strings.
+    y = np.asarray(y)
     if y.dtype.kind in 'US':
         _, y = np.unique(y, return_inverse=True)
 
@@ -948,6 +949,7 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
     nCov = X.shape[1]
 
     # Coerce to integers if we've got strings.
+    y = np.asarray(y)
     if y.dtype.kind in 'US':
         _, y = np.unique(y, return_inverse=True)
 
