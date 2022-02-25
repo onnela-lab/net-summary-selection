@@ -134,7 +134,7 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
     # ranking contains the indices of the final ranking in decreasing order of importance
     ranking = []
 
-    ### The first selected feature is the one with the maximal penalized I(X_j, Y) value
+    # The first selected feature is the one with the maximal penalized I(X_j, Y) value
     selected = np.argmax(initial_scores_mcost)
     ranking.append(selected)
     unRanked.pop(selected)
@@ -196,7 +196,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
             a dictionary that contains the precomputed numpy.ndarray of conditional
             pairwise MI between features, conditioned to the response values.
             Each key is a response modality, and each value is a conditional
-            MI matrix between features I(X_i,X_j | y=key). Useful to save
+            MI matrix between features I(X_i, X_j | y=key). Useful to save
             computational times when wanting to use multiple cost values, but
             by default it is computed in the function.
 
@@ -210,7 +210,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
             a dictionary that contains the precomputed numpy.ndarray of conditional
             pairwise MI between features, conditioned to the response values.
             Each key is a response modality, and each value is a conditional
-            MI matrix between features I(X_i,X_j | y=key).
+            MI matrix between features I(X_i, X_j | y=key).
     """
 
     num_features = X.shape[1]
@@ -406,7 +406,7 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
             a dictionary that contains the precomputed numpy.ndarray of conditional
             pairwise MI between features, conditioned to the response values.
             Each key is a response modality, and each value is a conditional
-            MI matrix between features I(X_i,X_j | y=key). Useful to save
+            MI matrix between features I(X_i, X_j | y=key). Useful to save
             computational times when wanting to use multiple cost values, but
             by default it is computed in the function.
 
@@ -420,17 +420,14 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
             a dictionary that contains the precomputed numpy.ndarray of conditional
             pairwise MI between features, conditioned to the response values.
             Each key is a response modality, and each value is a conditional
-            MI matrix between features I(X_i,X_j | y=key).
-
+            MI matrix between features I(X_i, X_j | y=key).
     """
 
     num_features = X.shape[1]
 
-    if (cost_vec is None):
+    if cost_vec is None:
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(num_features)
-    #else:
-    #    cost_vec=np.array(cost_vec)
 
     # Check on num_features_to_select
     if (num_features_to_select is not None):
@@ -442,7 +439,7 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
     unRanked = list(range(num_features))
 
     for featIdx in range(num_features):
-        if is_disc[featIdx]==True and len(np.unique(X[:,featIdx])) == X.shape[0]:
+        if is_disc[featIdx] and len(np.unique(X[:, featIdx])) == X.shape[0]:
             is_disc[featIdx] = False
 
     initial_scores = mutual_info_classif(X, y, discrete_features=is_disc, random_state=random_seed)
@@ -451,25 +448,34 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
     if MI_matrix is None:
         # Compute all the pairwise mutual info depending on if the feature
         # is discrete or continuous
-        matrix_MI_Xk_Xj = np.zeros( (num_features, num_features), dtype=float)
+        matrix_MI_Xk_Xj = np.zeros((num_features, num_features), dtype=float)
 
         for ii in range(num_features):
-            if num_cores==1:
-                if is_disc[ii] == True: # If the ii-th feature is discrete
+            if num_cores == 1:
+                if is_disc[ii]:  # If the ii-th feature is discrete
                     # we use the classif version
-                    matrix_MI_Xk_Xj[ii,:] = mutual_info_classif(X, X[:,ii], discrete_features=is_disc, random_state=random_seed)
-                elif is_disc[ii] == False:
+                    matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
+                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
+                else:
                     # otherwise we use the continuous (regression) version
-                    matrix_MI_Xk_Xj[ii,:] = mutual_info_regression(X, X[:,ii], discrete_features=is_disc, random_state=random_seed)
+                    matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
+                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
             else:
-                 if is_disc[ii] == True:
-                     matrix_MI_Xk_Xj[ii,:] = Parallel(n_jobs = num_cores)( delayed(mutual_info_classif)(X[:,k].reshape(-1,1), X[:,ii], discrete_features = is_disc[k], random_state = random_seed) for k in range(num_features) )
-                 elif is_disc[ii] == False:
-                     matrix_MI_Xk_Xj[ii,:] = Parallel(n_jobs = num_cores)( delayed(mutual_info_regression)(X[:,k].reshape(-1,1), X[:,ii], discrete_features = is_disc[k], random_state = random_seed) for k in range(num_features) )
+                if is_disc[ii]:
+                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
+                        delayed(mutual_info_classif)(
+                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
+                            random_state=random_seed
+                        ) for k in range(num_features))
+                else:
+                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
+                        delayed(mutual_info_regression)(
+                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
+                            random_state=random_seed
+                        ) for k in range(num_features))
 
     else:
         matrix_MI_Xk_Xj = MI_matrix
-
 
     # For the Joint mutual information, we also need to compute the matrices
     # I(Xk, Xj | Y=y) for y in Y
@@ -488,35 +494,45 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
         for valY in yModalities:
 
             # Initialize a new matrix
-            matTmp = np.zeros( (num_features, num_features), dtype=float)
+            matTmp = np.zeros((num_features, num_features), dtype=float)
             # Extract the rows of X with this modality of Y
-            subX = X[y==valY,]
+            subX = X[y == valY]
 
             # proportion of this modality
-            proValY = np.mean(y==valY)
+            proValY = np.mean(y == valY)
 
             is_discForSubX = copy.deepcopy(is_disc)
             for featIdx in range(num_features):
-                if is_disc[featIdx]==True and len(np.unique(subX[:,featIdx])) == subX.shape[0]:
+                if is_disc[featIdx] and len(np.unique(subX[:, featIdx])) == subX.shape[0]:
                     is_discForSubX[featIdx] = False
 
             # Fill the matrix
             for ii in range(num_features):
-                if num_cores==1:
-                    if is_discForSubX[ii] == True: # If the ii-th feature is discrete
+                if num_cores == 1:
+                    if is_discForSubX[ii]:  # If the ii-th feature is discrete
                         # we use the classif version
-                        matTmp[ii,:] = proValY * mutual_info_classif(subX, subX[:,ii], discrete_features=is_discForSubX, random_state=random_seed)
-                    elif is_discForSubX[ii] == False:
+                        matTmp[ii, :] = proValY * mutual_info_classif(
+                            subX, subX[:, ii], discrete_features=is_discForSubX,
+                            random_state=random_seed)
+                    else:
                         # otherwise we use the continuous (regression) version
-                        matTmp[ii,:] = proValY * mutual_info_regression(subX, subX[:,ii], discrete_features=is_discForSubX, random_state=random_seed)
+                        matTmp[ii, :] = proValY * mutual_info_regression(
+                            subX, subX[:, ii], discrete_features=is_discForSubX,
+                            random_state=random_seed)
 
                 else:
-                     if is_discForSubX[ii] == True:
-                         vecToMultiply = Parallel(n_jobs=num_cores)( delayed(mutual_info_classif)(subX[:,k].reshape(-1,1), subX[:,ii], discrete_features = is_discForSubX[k], random_state = random_seed) for k in range(num_features) )
-                         matTmp[ii,:] = [proValY * val for val in vecToMultiply]
-                     elif is_discForSubX[ii] == False:
-                         vecToMultiply = Parallel(n_jobs=num_cores)( delayed(mutual_info_regression)(subX[:,k].reshape(-1,1), subX[:,ii], discrete_features = is_discForSubX[k], random_state = random_seed) for k in range(num_features) )
-                         matTmp[ii,:] = [proValY * val for val in vecToMultiply]
+                    if is_discForSubX[ii]:
+                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_classif)(
+                            subX[:, k].reshape(-1, 1), subX[:, ii],
+                            discrete_features=is_discForSubX[k], random_state=random_seed
+                        ) for k in range(num_features))
+                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
+                    else:
+                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_regression)(
+                            subX[:, k].reshape(-1, 1), subX[:, ii],
+                            discrete_features=is_discForSubX[k], random_state=random_seed
+                        ) for k in range(num_features))
+                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
 
             MI_condY[valY] = matTmp
     else:
@@ -525,25 +541,26 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
     # ranking contains the indices of the final ranking in decreasing order of importance
     ranking = []
 
-    ### The first selected feature is the one with the maximal penalized I(X_j, Y) value
+    # The first selected feature is the one with the maximal penalized I(X_j, Y) value
     selected = np.argmax(initial_scores_mcost)
     ranking.append(selected)
     unRanked.pop(selected)
 
     # Until we have the desired number of selected_features, we apply the selection criterion
-    for k in range(1,num_selected_features):
+    for k in range(1, num_selected_features):
 
         featureRel = []
         # Compute the criterion to maximize for each unranked covariate
         for idx in unRanked:
             vecSummed = np.zeros(len(ranking))
             for valY in yModalities:
-                vecSummed += MI_condY[valY][ranking,idx]
+                vecSummed += MI_condY[valY][ranking, idx]
 
-            criterionVal = np.min( initial_scores[ranking] - matrix_MI_Xk_Xj[ranking,idx] + vecSummed ) + initial_scores_mcost[idx]
+            criterionVal = np.min(initial_scores[ranking] - matrix_MI_Xk_Xj[ranking, idx]
+                                  + vecSummed) + initial_scores_mcost[idx]
             # J(Xk) = min_j [ I(Xj;Y) - I(Xk;Xj) + I(Xk;Xj|Y) ] + (I(Xk;Y) - lambda * costk)
 
-            featureRel.append( criterionVal )
+            featureRel.append(criterionVal)
 
         tmp_idx = np.argmax(featureRel)
         ranking.append(unRanked[tmp_idx])
@@ -552,9 +569,9 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
     return ranking, matrix_MI_Xk_Xj, MI_condY
 
 
-def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_features_to_select = None,
-            proximity = "distance", min_samples_leaf = 100, n_estimators = 500,
-            sim_matrix = None, is_disc=None):
+def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to_select=None,
+            proximity="distance", min_samples_leaf=100, n_estimators=500, sim_matrix=None,
+            is_disc=None):
     """ Cost-based feature ranking adaptation of the ReliefF algorithm.
 
     Cost-based adaptation of the ReliefF algorithm, where the nearest neighbors
@@ -631,7 +648,7 @@ def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_featu
     cov_means = np.mean(X, axis=0)
     cov_std = np.std(X, axis=0)
     for i in range(X.shape[1]):
-        X_std[:,i] = (X[:,i] - cov_means[i])/cov_std[i]
+        X_std[:, i] = (X[:, i] - cov_means[i])/cov_std[i]
 
     # Determine the number/proportion of classes in y
     classes = np.unique(y)
@@ -649,12 +666,12 @@ def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_featu
     if proximity == "distance":
         if sim_matrix is None:
             # Compute all pairs of distance between training data
-            distMat = np.zeros(shape = (nTrain,nTrain), dtype=float)
+            distMat = np.zeros(shape=(nTrain, nTrain), dtype=float)
 
             for i in range(nTrain-1):
-                for j in range(i+1,nTrain,1):
-                    distMat[i,j] = _private_man_dist(X_std[i,:], X_std[j,:], minXVal, maxXVal)
-                    distMat[j,i] = distMat[i,j]
+                for j in range(i+1, nTrain, 1):
+                    distMat[i, j] = _private_man_dist(X_std[i, :], X_std[j, :], minXVal, maxXVal)
+                    distMat[j, i] = distMat[i, j]
 
         else:
             distMat = sim_matrix
@@ -663,8 +680,8 @@ def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_featu
     if proximity == "rf prox":
         if sim_matrix is None:
             # Train a random forest and deduce the proximity matrix
-            model = RandomForestClassifier(n_estimators = n_estimators,
-                                           min_samples_leaf = min_samples_leaf)
+            model = RandomForestClassifier(n_estimators=n_estimators,
+                                           min_samples_leaf=min_samples_leaf)
             model.fit(X_std, y)
             proxMatRF = _private_proximity_matrix(model, X_std, normalize=True)
             proxMat = proxMatRF
@@ -678,47 +695,52 @@ def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_featu
     # To store the indices of the nearest hits
     kNearHits = np.zeros(num_neighbors, dtype=int)
     # To store the indices of the misses for all class different than R_i
-    kNearMisses = np.zeros( (nClasses-1,num_neighbors), dtype=int)
+    kNearMisses = np.zeros((nClasses-1, num_neighbors), dtype=int)
 
     # Initialize the weights to zero
     weightsDic = dict()
     for cov in range(nCov):
         weightsDic[cov] = 0
 
-    m = nTrain # Here we compute the score using all the training data
+    m = nTrain  # Here we compute the score using all the training data
     for i in range(m):
         # For the same class that R_i, keep the indices achieving the k lower distances
         if proximity == "distance":
-            argSorted = np.argsort(distMat[i,y==y[i]]) # We withdraw the i-th element
+            argSorted = np.argsort(distMat[i, y == y[i]])  # We withdraw the i-th element
             kNearHits = argSorted[argSorted != i][0:num_neighbors]
-            classDifRi = classes[classes!=y[i]]
+            classDifRi = classes[classes != y[i]]
             for c in range(len(classDifRi)):
                 tmp = classDifRi[c]
-                kNearMisses[c,:] = np.argsort(distMat[i,y==tmp])[0:num_neighbors]
+                kNearMisses[c, :] = np.argsort(distMat[i, y == tmp])[0:num_neighbors]
 
         if proximity == "rf prox":
-            argSorted = np.argsort(-proxMat[i,y==y[i]]) # We withdraw the i-th element
+            argSorted = np.argsort(-proxMat[i, y == y[i]])  # We withdraw the i-th element
             kNearHits = argSorted[argSorted != i][0:num_neighbors]
-            classDifRi = classes[classes!=y[i]]
+            classDifRi = classes[classes != y[i]]
             for c in range(len(classDifRi)):
                 tmp = classDifRi[c]
-                kNearMisses[c,:] = np.argsort(-proxMat[i,y==tmp])[0:num_neighbors]
+                kNearMisses[c, :] = np.argsort(-proxMat[i, y == tmp])[0:num_neighbors]
 
         # Compute the elements diff(A, R_i, H_j) for j in 1:k, per feature A
         for cov in range(nCov):
-            compDistRiFromHits = [ np.abs(X_std[i,cov] - X_std[hit,cov])/(maxXVal[cov] - minXVal[cov])
-                                    for hit in kNearHits ]
+            compDistRiFromHits = [
+                np.abs(X_std[i, cov] - X_std[hit, cov])/(maxXVal[cov] - minXVal[cov])
+                for hit in kNearHits
+            ]
             weightsDic[cov] -= np.mean(compDistRiFromHits)/m
 
             # For each class different from the one of R_i, do the same with
             # weight by prior proba ratio
             for c in range(len(classDifRi)):
                 tmp = classDifRi[c]
-                compDistRiFromMisses = [ np.abs(X_std[i,cov] - X_std[miss,cov])/(maxXVal[cov] - minXVal[cov])
-                                        for miss in kNearMisses[c] ]
+                compDistRiFromMisses = [
+                    np.abs(X_std[i, cov] - X_std[miss, cov])/(maxXVal[cov] - minXVal[cov])
+                    for miss in kNearMisses[c]
+                ]
 
                 # Reminder: pClasses is a dictionary
-                weightsDic[cov] += ( pClasses[tmp]/(1-pClasses[y[i]]) ) * np.mean(compDistRiFromMisses)/m
+                weightsDic[cov] += (pClasses[tmp] / (1-pClasses[y[i]])) \
+                    * np.mean(compDistRiFromMisses) / m
 
             # Finally also update with the penalization (cost)
             # I do not use the /(m*k) term but only /m to be more consistent
@@ -739,21 +761,22 @@ def _private_man_dist(inst1, inst2, minXVal, maxXVal):
     """ Compute the Manhattan distance between two set of covariates. """
 
     nCov = len(inst1)
-    dist_comp = [ np.abs(inst1[i] - inst2[i])/(maxXVal[i] - minXVal[i])
-                for i in range(nCov) ]
+    dist_comp = [np.abs(inst1[i] - inst2[i])/(maxXVal[i] - minXVal[i])
+                 for i in range(nCov)]
     dist = np.sum(dist_comp)
     return dist
+
 
 def _private_proximity_matrix(model, X, normalize=True):
     """ Compute the random forest proximity matrix. """
 
     terminals = model.apply(X)
     nTrees = terminals.shape[1]
-    a = terminals[:,0]
+    a = terminals[:, 0]
     proxMat = 1*np.equal.outer(a, a)
 
     for i in range(1, nTrees):
-        a = terminals[:,i]
+        a = terminals[:, i]
         proxMat += 1*np.equal.outer(a, a)
 
     if normalize:
@@ -762,9 +785,9 @@ def _private_proximity_matrix(model, X, normalize=True):
     return proxMat
 
 
-def pen_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_select = None,
-                      imp_type = "impurity", min_samples_leaf = 1,
-                      n_estimators = 500, rf_importance_vec = None, is_disc=None):
+def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=None,
+                      imp_type="impurity", min_samples_leaf=1,
+                      n_estimators=500, rf_importance_vec=None, is_disc=None):
     """ Cost-based feature ranking with penalized random forest importance.
 
     The cost-based ranking of the features are deduced by penalizing the
@@ -868,7 +891,8 @@ def pen_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_sel
 
     # To facilitate the comparison between different types of importance,
     # we set values between 0 and 1, and to sum to 1.
-    rf_importance_copy = (np.array(rf_importance_copy)-np.min(rf_importance_copy))/(np.max(rf_importance_copy) - np.min(rf_importance_copy))
+    rf_importance_copy = (np.array(rf_importance_copy)-np.min(rf_importance_copy)) \
+        / (np.max(rf_importance_copy) - np.min(rf_importance_copy))
     rf_importance_copy = rf_importance_copy/np.sum(rf_importance_copy)
 
     for cov in range(nCov):
@@ -880,9 +904,10 @@ def pen_rf_importance(X, y, cost_vec = None, cost_param = 0, num_features_to_sel
     return ranking, unpenalized_rf_importance
 
 
-def weighted_rf_importance(X, y: np.ndarray, cost_vec = None, cost_param = 0, num_features_to_select = None,
-                           imp_type = "impurity", min_samples_leaf = 1,
-                           n_estimators = 500, is_disc=None):
+def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
+                           num_features_to_select=None,
+                           imp_type="impurity", min_samples_leaf=1,
+                           n_estimators=500, is_disc=None):
     """ Cost-based feature ranking using weighted random forest importance.
 
     The cost-based ranking of the features are deduced using the feature
@@ -941,7 +966,7 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec = None, cost_param = 0, nu
 
     # Compute the rf weights for sampling the covariates
     # Note, a base importance of 0.01 is added to all features to avoid num. errors
-    sampling_weights = ( 1/(cost_vec+0.01)**cost_param) / (np.sum(1/(cost_vec+0.01)**cost_param))
+    sampling_weights = (1/(cost_vec+0.01)**cost_param) / (np.sum(1/(cost_vec+0.01)**cost_param))
 
     # For format compatibility between python and R (rpy2)
     from rpy2.robjects import numpy2ri
@@ -964,7 +989,7 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec = None, cost_param = 0, nu
                             install.packages(x, dependencies = TRUE)
                             library(x, character.only = TRUE)}
             }
-            )
+           )
     # Determine the importance
     library(ranger)
     trainedWeightedRF <- ranger(x=as.data.frame(X_train), y = as.numeric(y_train),
@@ -983,7 +1008,7 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec = None, cost_param = 0, nu
 
 
 def multi_mRMR(X, y, is_disc, cost_vec, cost_param_vec,
-               num_features_to_select = None, random_seed = 123, num_cores = 1):
+               num_features_to_select=None, random_seed=123, num_cores=1):
     """ Cost-based mRMR feature ranking with multiple penalization parameters.
 
     Function to obtain the rankings associated to different cost parameters,
@@ -992,7 +1017,7 @@ def multi_mRMR(X, y, is_disc, cost_vec, cost_param_vec,
     H. Peng, F. Long, and C. Ding.  Feature Selection Based on Mutual
     Information: Criteria of Max-Dependency, Max-Relevance, and Min-Redundancy.
     IEEE Transactions on pattern analysis and machine intelligence,
-    27:1226–1238, 2005.
+    27:1226--1238, 2005.
 
     Args:
         X (numpy.ndarray):
@@ -1034,15 +1059,15 @@ def multi_mRMR(X, y, is_disc, cost_vec, cost_param_vec,
     else:
         num_features_to_select = nCov
 
-    matRanking = np.zeros( (grid_size, num_features_to_select) )
+    matRanking = np.zeros((grid_size, num_features_to_select))
 
     k = 0
     for cost_param in cost_param_vec:
-        rankedIdx, MI_matrix = mRMR(X = X, y = y, is_disc = is_disc,
-                                        cost_vec = cost_vec, cost_param = cost_param,
-                                        num_features_to_select = num_features_to_select,
-                                        random_seed = random_seed, num_cores = num_cores, MI_matrix = MI_matrix)
-        matRanking[k,:] = rankedIdx
+        rankedIdx, MI_matrix = mRMR(
+            X=X, y=y, is_disc=is_disc, cost_vec=cost_vec, cost_param=cost_param,
+            num_features_to_select=num_features_to_select, random_seed=random_seed,
+            num_cores=num_cores, MI_matrix=MI_matrix)
+        matRanking[k, :] = rankedIdx
         k += 1
 
     output = {"cost_param": cost_param_vec}
@@ -1054,8 +1079,8 @@ def multi_mRMR(X, y, is_disc, cost_vec, cost_param_vec,
     return dfPen_Ranking
 
 
-def multi_JMI(X, y, is_disc, cost_vec, cost_param_vec,
-              num_features_to_select = None, random_seed = 123, num_cores = 1):
+def multi_JMI(X, y, is_disc, cost_vec, cost_param_vec, num_features_to_select=None, random_seed=123,
+              num_cores=1):
     """ Cost-based JMI feature ranking with multiple penalization parameters.
 
     Function to obtain the rankings associated to different cost parameters,
@@ -1108,16 +1133,15 @@ def multi_JMI(X, y, is_disc, cost_vec, cost_param_vec,
     else:
         num_features_to_select = nCov
 
-    matRanking = np.zeros( (grid_size, num_features_to_select) )
+    matRanking = np.zeros((grid_size, num_features_to_select))
 
     k = 0
     for cost_param in cost_param_vec:
-        rankedIdx, MI_matrix, MI_conditional = JMI(X = X, y = y, is_disc = is_disc,
-                                                       cost_vec = cost_vec, cost_param = cost_param,
-                                                       num_features_to_select = num_features_to_select,
-                                                       random_seed = random_seed, num_cores = num_cores,
-                                                       MI_matrix = MI_matrix, MI_conditional = MI_conditional)
-        matRanking[k,:] = rankedIdx
+        rankedIdx, MI_matrix, MI_conditional = JMI(
+            X=X, y=y, is_disc=is_disc, cost_vec=cost_vec, cost_param=cost_param,
+            num_features_to_select=num_features_to_select, random_seed=random_seed,
+            num_cores=num_cores, MI_matrix=MI_matrix, MI_conditional=MI_conditional)
+        matRanking[k, :] = rankedIdx
         k += 1
 
     output = {"cost_param": cost_param_vec}
@@ -1130,7 +1154,7 @@ def multi_JMI(X, y, is_disc, cost_vec, cost_param_vec,
 
 
 def multi_JMIM(X, y, is_disc, cost_vec, cost_param_vec,
-               num_features_to_select = None, random_seed = 123, num_cores = 1):
+               num_features_to_select=None, random_seed=123, num_cores=1):
     """ Cost-based JMIM feature ranking with multiple penalization parameters
 
     Function to obtain the rankings associated to different cost parameters,
@@ -1138,7 +1162,7 @@ def multi_JMIM(X, y, is_disc, cost_vec, cost_param_vec,
     Joint Mutual Information Maximization (Bennasar et al. (2015)).
 
     M. Bennasar, Y. Hicks, and R. Setchi. Feature selection using Joint Mutual
-    Information Maximisation. Expert Systems With Applications, 42:8520–8532,
+    Information Maximisation. Expert Systems With Applications, 42:8520--8532,
     2015.
 
     Args:
@@ -1183,16 +1207,15 @@ def multi_JMIM(X, y, is_disc, cost_vec, cost_param_vec,
     else:
         num_features_to_select = nCov
 
-    matRanking = np.zeros( (grid_size, num_features_to_select) )
+    matRanking = np.zeros((grid_size, num_features_to_select))
 
     k = 0
     for cost_param in cost_param_vec:
-        rankedIdx, MI_matrix, MI_conditional = JMIM(X = X, y = y, is_disc = is_disc,
-                                                    cost_vec = cost_vec, cost_param = cost_param,
-                                                    num_features_to_select = num_features_to_select,
-                                                    random_seed = random_seed, num_cores = num_cores,
-                                                    MI_matrix = MI_matrix, MI_conditional = MI_conditional)
-        matRanking[k,:] = rankedIdx
+        rankedIdx, MI_matrix, MI_conditional = JMIM(
+            X=X, y=y, is_disc=is_disc, cost_vec=cost_vec, cost_param=cost_param,
+            num_features_to_select=num_features_to_select, random_seed=random_seed,
+            num_cores=num_cores, MI_matrix=MI_matrix, MI_conditional=MI_conditional)
+        matRanking[k, :] = rankedIdx
         k += 1
 
     output = {"cost_param": cost_param_vec}
@@ -1204,8 +1227,8 @@ def multi_JMIM(X, y, is_disc, cost_vec, cost_param_vec,
     return dfPen_Ranking
 
 
-def multi_reliefF(X, y, cost_vec, cost_param_vec, num_neighbors = 10, num_features_to_select = None,
-                 proximity = "distance", min_samples_leaf = 100, n_estimators = 500):
+def multi_reliefF(X, y, cost_vec, cost_param_vec, num_neighbors=10, num_features_to_select=None,
+                  proximity="distance", min_samples_leaf=100, n_estimators=500):
     """ Cost-based ReliefF algorithm with multiple penalization parameters.
 
     Cost-based adaptation of the ReliefF algorithm, where the nearest neighbors
@@ -1261,15 +1284,16 @@ def multi_reliefF(X, y, cost_vec, cost_param_vec, num_neighbors = 10, num_featur
     else:
         num_features_to_select = nCov
 
-    matRanking = np.zeros( (grid_size, num_features_to_select) )
+    matRanking = np.zeros((grid_size, num_features_to_select))
 
     k = 0
     for cost_param in cost_param_vec:
-        rankedIdx, scores, sim_matrix  = reliefF(X = X, y = y, cost_vec = cost_vec, cost_param = cost_param, num_neighbors = num_neighbors,
-                                                 num_features_to_select = num_features_to_select, proximity = proximity,
-                                                 min_samples_leaf = min_samples_leaf, n_estimators = n_estimators,
-                                                 sim_matrix = sim_matrix)
-        matRanking[k,:] = rankedIdx
+        rankedIdx, scores, sim_matrix = reliefF(
+            X=X, y=y, cost_vec=cost_vec, cost_param=cost_param, num_neighbors=num_neighbors,
+            num_features_to_select=num_features_to_select, proximity=proximity,
+            min_samples_leaf=min_samples_leaf, n_estimators=n_estimators,
+            sim_matrix=sim_matrix)
+        matRanking[k, :] = rankedIdx
         k += 1
 
     output = {"cost_param": cost_param_vec}
@@ -1281,10 +1305,12 @@ def multi_reliefF(X, y, cost_vec, cost_param_vec, num_neighbors = 10, num_featur
     return dfPen_Ranking
 
 
-def multi_pen_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to_select = None,
-                            imp_type = "impurity", min_samples_leaf = 1,
-                            n_estimators = 500):
-    """ Cost-based feature ranking with penalized random forest importance, with multiple penalization values.
+def multi_pen_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to_select=None,
+                            imp_type="impurity", min_samples_leaf=1,
+                            n_estimators=500):
+    """
+    Cost-based feature ranking with penalized random forest importance, with multiple penalization
+    values.
 
     The cost-based ranking of the features are deduced by penalizing the
     random forest importance by the feature costs. This function allows the use
@@ -1332,15 +1358,16 @@ def multi_pen_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to_sele
     else:
         num_features_to_select = nCov
 
-    matRanking = np.zeros( (grid_size, num_features_to_select) )
+    matRanking = np.zeros((grid_size, num_features_to_select))
 
     k = 0
     for cost_param in cost_param_vec:
-        rankedIdx, unpenalized_rf_importance  = pen_rf_importance(X = X, y = y, cost_vec = cost_vec, cost_param = cost_param,
-                                                                  num_features_to_select = num_features_to_select, imp_type = imp_type,
-                                                                  min_samples_leaf = min_samples_leaf, n_estimators = n_estimators,
-                                                                  rf_importance_vec = unpenalized_rf_importance)
-        matRanking[k,:] = rankedIdx
+        rankedIdx, unpenalized_rf_importance = pen_rf_importance(
+            X=X, y=y, cost_vec=cost_vec, cost_param=cost_param,
+            num_features_to_select=num_features_to_select, imp_type=imp_type,
+            min_samples_leaf=min_samples_leaf, n_estimators=n_estimators,
+            rf_importance_vec=unpenalized_rf_importance)
+        matRanking[k, :] = rankedIdx
         k += 1
 
     output = {"cost_param": cost_param_vec}
@@ -1352,8 +1379,8 @@ def multi_pen_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to_sele
     return dfPen_Ranking
 
 
-def multi_weighted_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to_select = None,
-                                 imp_type = "impurity", min_samples_leaf = 1, n_estimators = 500):
+def multi_weighted_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to_select=None,
+                                 imp_type="impurity", min_samples_leaf=1, n_estimators=500):
     """ Cost-based ranking using weighted random forest importance, with multiple penalization values.
 
     The cost-based ranking of the features are deduced using the feature
@@ -1402,14 +1429,15 @@ def multi_weighted_rf_importance(X, y, cost_vec, cost_param_vec, num_features_to
     else:
         num_features_to_select = nCov
 
-    matRanking = np.zeros( (grid_size, num_features_to_select) )
+    matRanking = np.zeros((grid_size, num_features_to_select))
 
     k = 0
     for cost_param in cost_param_vec:
-        rankedIdx  = weighted_rf_importance(X = X, y = y, cost_vec = cost_vec, cost_param = cost_param,
-                                            num_features_to_select = num_features_to_select, imp_type = imp_type,
-                                            min_samples_leaf = min_samples_leaf, n_estimators = n_estimators)
-        matRanking[k,:] = rankedIdx
+        rankedIdx = weighted_rf_importance(
+            X=X, y=y, cost_vec=cost_vec, cost_param=cost_param,
+            num_features_to_select=num_features_to_select, imp_type=imp_type,
+            min_samples_leaf=min_samples_leaf, n_estimators=n_estimators)
+        matRanking[k, :] = rankedIdx
         k += 1
 
     output = {"cost_param": cost_param_vec}
