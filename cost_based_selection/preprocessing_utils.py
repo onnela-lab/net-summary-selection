@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Utility and preprocessing functions. """
 
+import glob
 import logging
 import numpy as np
 import pandas as pd
@@ -205,6 +206,8 @@ def load_simulations(filenames: list[str], drop_zero_variance_features: bool = T
     costs = []
     is_discrete = None
 
+    if isinstance(filenames, str):
+        filenames = glob.glob(filenames)
     for filename in filenames:
         with open(filename, 'rb') as fp:
             batch = pickle.load(fp)

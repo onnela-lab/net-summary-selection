@@ -9,12 +9,15 @@ import time
 logging.basicConfig(level='INFO')
 
 
-METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR', 'reliefF']}
+METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR']}
 for key in ['pen_rf_importance', 'weighted_rf_importance']:
     for implementation in ['impurity', 'permutation']:
-        METHODS[f'{key}_implementation'] = lambda *args, **kwargs: getattr(cost_based_methods, key)(
+        METHODS[f'{key}_{implementation}'] = lambda *args, **kwargs: getattr(cost_based_methods, key)(
             *args, **kwargs, imp_type=implementation,
         )
+for proximity in ['rf prox', 'distance']:
+    METHODS[f"reliefF_{proximity.replace(' ', '_')}"] = \
+        lambda *args, **kwargs: cost_based_methods.reliefF(*args, **kwargs, proximity=proximity)
 
 
 def __main__():
@@ -44,7 +47,7 @@ def __main__():
         'start': time.time(),
         'features': data['features'],
     }
-    ranking, *_ = getattr(cost_based_methods, args.method)(**kwargs)
+    ranking, *_ = METHODS[args.method](**kwargs)
 
     logger.info('ranked %d features', len(ranking))
 

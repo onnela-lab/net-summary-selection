@@ -66,8 +66,8 @@ ${SIMULATIONS_models_splits} : ${SIMULATION_ROOT}/% : \
 # Ranking
 # =======
 
-METHODS = JMI JMIM mRMR reliefF pen_rf_importance_impurity pen_rf_importance_permutation \
-	weighted_rf_importance_impurity weighted_rf_importance_permutation
+METHODS = JMI JMIM mRMR reliefF_distance reliefF_rf_prox pen_rf_importance_impurity \
+	pen_rf_importance_permutation weighted_rf_importance_impurity weighted_rf_importance_permutation
 PENALTIES = 0.0 0.0125 0.025 0.05 0.1 0.2 0.4 0.8 1.6 3.2 6.4 12.8 25.6 51.2
 RANKING_ROOT = workspace/rankings
 RANKING_TARGETS_models = $(addprefix ${RANKING_ROOT}/,${MODELS})
@@ -78,6 +78,6 @@ ${RANKING_ROOT} : $(addprefix ${RANKING_ROOT}/,${MODELS})
 ${RANKING_TARGETS_models} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${METHODS})
 ${RANKING_TARGETS_models_methods} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${PENALTIES:=.pkl})
 
-${RANKING_TARGETS} : ${RANKING_ROOT}/%.pkl : scripts/rank_features.py $${SIMULATIONS_$$(call wordx,$$*,1,/)_train}
-	NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python $< --penalty=$(call wordx,$*,3,/) \
-		$(call wordx,$*,2,/) $@ $(filter-out $<,$^)
+${RANKING_TARGETS} : ${RANKING_ROOT}/%.pkl : $${SIMULATIONS_$$(call wordx,$$*,1,/)_train}
+	NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python scripts/rank_features.py \
+		--penalty=$(call wordx,$*,3,/) $(call wordx,$*,2,/) $@ $^
