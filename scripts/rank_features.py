@@ -1,5 +1,6 @@
 import argparse
 from cost_based_selection import cost_based_methods, preprocessing_utils
+import functools as ft
 import logging
 import os
 import pickle
@@ -12,12 +13,12 @@ logging.basicConfig(level='INFO')
 METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR']}
 for key in ['pen_rf_importance', 'weighted_rf_importance']:
     for implementation in ['impurity', 'permutation']:
-        METHODS[f'{key}_{implementation}'] = lambda *args, **kwargs: getattr(cost_based_methods, key)(
-            *args, **kwargs, imp_type=implementation,
-        )
+        METHODS[f'{key}_{implementation}'] = ft.partial(
+            getattr(cost_based_methods, key), imp_type=implementation)
+
 for proximity in ['rf prox', 'distance']:
-    METHODS[f"reliefF_{proximity.replace(' ', '_')}"] = \
-        lambda *args, **kwargs: cost_based_methods.reliefF(*args, **kwargs, proximity=proximity)
+    METHODS[f"reliefF_{proximity.replace(' ', '_')}"] = ft.partial(
+        cost_based_methods.reliefF, proximity=proximity)
 
 
 def __main__():
