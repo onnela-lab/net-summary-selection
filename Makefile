@@ -22,35 +22,42 @@ build : tests
 # ---------------------
 
 SIMULATION_ROOT = workspace/simulations
-NUM_NODES = 1000
+NUM_NODES_train = 1000
+NUM_NODES_test = 1000
+NUM_NODES_small = 100
 BATCH_SIZE = 100
 NUM_BATCHES_train = 50
 NUM_BATCHES_test = 50
+NUM_BATCHES_small = 50
 BATCH_INDICES_train = $(shell seq ${NUM_BATCHES_train})
 BATCH_INDICES_test = $(shell seq ${NUM_BATCHES_test})
+BATCH_INDICES_small = $(shell seq ${NUM_BATCHES_small})
 SEED_train =
 SEED_test = 999
+SEED_small = 99
 MODELS = ba dmX
-SPLITS = train test
+SPLITS = train test small
 
 # Targets for different models
 # ----------------------------
 
 SIMULATIONS_ba_train = $(addprefix ${SIMULATION_ROOT}/ba/train/,${BATCH_INDICES_train:=.pkl})
 SIMULATIONS_ba_test = $(addprefix ${SIMULATION_ROOT}/ba/test/,${BATCH_INDICES_test:=.pkl})
-SIMULATIONS_ba = ${SIMULATIONS_ba_train} ${SIMULATIONS_ba_test}
+SIMULATIONS_ba_small = $(addprefix ${SIMULATION_ROOT}/ba/small/,${BATCH_INDICES_test:=.pkl})
+SIMULATIONS_ba = ${SIMULATIONS_ba_train} ${SIMULATIONS_ba_test} ${SIMULATIONS_ba_small}
 
 SIMULATIONS_dmX_train = $(addprefix ${SIMULATION_ROOT}/dmX/train/,${BATCH_INDICES_train:=.pkl})
 SIMULATIONS_dmX_test = $(addprefix ${SIMULATION_ROOT}/dmX/test/,${BATCH_INDICES_test:=.pkl})
-SIMULATIONS_dmX = ${SIMULATIONS_dmX_train} ${SIMULATIONS_dmX_test}
+SIMULATIONS_dmX_small = $(addprefix ${SIMULATION_ROOT}/dmX/small/,${BATCH_INDICES_test:=.pkl})
+SIMULATIONS_dmX = ${SIMULATIONS_dmX_train} ${SIMULATIONS_dmX_test} ${SIMULATIONS_dmX_small}
 
 SIMULATIONS = ${SIMULATIONS_ba} ${SIMULATIONS_dmX}
 
 # The pattern will be {model}/{split}/{batch}
 ${SIMULATIONS} : ${SIMULATION_ROOT}/%.pkl : scripts/generate_reference_table.py
 	NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python $< \
-		--seed=${SEED_$(call wordx,$*,2,/)}$(call wordx,$*,3,/) $(call wordx,$*,1,/) ${NUM_NODES} \
-		${BATCH_SIZE} $@
+		--seed=${SEED_$(call wordx,$*,2,/)}$(call wordx,$*,3,/) $(call wordx,$*,1,/) \
+		${NUM_NODES_$(call wordx,$*,2,/)} ${BATCH_SIZE} $@
 
 # Grouped targets
 # ---------------
@@ -70,14 +77,17 @@ METHODS = JMI JMIM mRMR reliefF_distance reliefF_rf_prox pen_rf_importance_impur
 	pen_rf_importance_permutation weighted_rf_importance_impurity weighted_rf_importance_permutation
 PENALTIES = 0.0 0.0125 0.025 0.05 0.1 0.2 0.4 0.8 1.6 3.2 6.4 12.8 25.6 51.2
 RANKING_ROOT = workspace/rankings
+RANKING_SPLITS = train small
 RANKING_TARGETS_models = $(addprefix ${RANKING_ROOT}/,${MODELS})
-RANKING_TARGETS_models_methods = $(foreach m,${RANKING_TARGETS_models},$(foreach k,${METHODS},${m}/${k}))
-RANKING_TARGETS = $(foreach mk,${RANKING_TARGETS_models_methods},$(foreach p,${PENALTIES},${mk}/${p}.pkl))
+RANKING_TARGETS_models_splits = $(foreach m,${RANKING_TARGETS_models},$(foreach s,${RANKING_SPLITS},${m}/${s}))
+RANKING_TARGETS_models_splits_methods = $(foreach ms,${RANKING_TARGETS_models_splits},$(foreach m,${METHODS},${ms}/${m}))
+RANKING_TARGETS = $(foreach msm,${RANKING_TARGETS_models_splits_methods},$(foreach p,${PENALTIES},${msm}/${p}.pkl))
 
 ${RANKING_ROOT} : $(addprefix ${RANKING_ROOT}/,${MODELS})
-${RANKING_TARGETS_models} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${METHODS})
-${RANKING_TARGETS_models_methods} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${PENALTIES:=.pkl})
+${RANKING_TARGETS_models} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${RANKING_SPLITS})
+${RANKING_TARGETS_models_splits} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${METHODS})
+${RANKING_TARGETS_models_splits_methods} : ${RANKING_ROOT}/% : $$(addprefix $$@/,$${PENALTIES:=.pkl})
 
-${RANKING_TARGETS} : ${RANKING_ROOT}/%.pkl : $${SIMULATIONS_$$(call wordx,$$*,1,/)_train}
+${RANKING_TARGETS} : ${RANKING_ROOT}/%.pkl : $${SIMULATIONS_$$(call wordx,$$*,1,/)_$$(call wordx,$$*,2,/)}
 	NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python scripts/rank_features.py \
-		--penalty=$(call wordx,$*,3,/) $(call wordx,$*,2,/) $@ $^
+		--penalty=$(call wordx,$*,4,/) $(call wordx,$*,3,/) $@ $^
