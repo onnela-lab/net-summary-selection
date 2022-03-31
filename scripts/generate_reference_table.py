@@ -8,7 +8,7 @@ import pickle
 import time
 from tqdm import tqdm
 from cost_based_selection import data_generation
-from cost_based_selection.summaries2 import compute_summaries
+from cost_based_selection.summaries import compute_summaries
 
 
 logging.basicConfig(level='INFO')

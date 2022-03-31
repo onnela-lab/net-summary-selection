@@ -1,5 +1,5 @@
-from cost_based_selection.summaries import compute_summaries as compute_summaries_v1
-from cost_based_selection.summaries2 import compute_summaries as compute_summaries_v2
+from cost_based_selection.old.summaries import compute_summaries as compute_summaries_v1
+from cost_based_selection.summaries import compute_summaries as compute_summaries_v2
 import networkx as nx
 import numpy as np
 import warnings

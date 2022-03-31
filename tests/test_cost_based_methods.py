@@ -1,4 +1,5 @@
-from cost_based_selection import cost_based_methods, cost_based_methods_old
+from cost_based_selection import cost_based_methods
+from cost_based_selection.old import cost_based_methods as cost_based_methods_old
 from cost_based_selection import data_generation
 from cost_based_selection import preprocessing_utils
 import functools as ft
