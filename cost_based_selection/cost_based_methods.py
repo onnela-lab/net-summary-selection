@@ -28,6 +28,13 @@ from sklearn.ensemble import RandomForestClassifier
 import rpy2.robjects
 
 
+def random(X, y, is_disc, cost_vec=None, cost_param=0):
+    """
+    Return a random feature ranking.
+    """
+    return [np.random.permutation(X.shape[1])]
+
+
 def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
          num_cores=1, MI_matrix=None):
     """
@@ -631,7 +638,8 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
     nCov = X.shape[1]
 
     if proximity not in ['distance', 'rf prox']:
-        raise ValueError("The argument proximity must be either 'distance' or 'rf prox'.")
+        raise ValueError(
+            f"The argument proximity must be either 'distance' or 'rf prox', not '{proximity}'.")
 
     if (cost_vec is None):
         # If no cost is specified, then all costs are set as equal to zero

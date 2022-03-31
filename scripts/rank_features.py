@@ -10,7 +10,7 @@ import time
 logging.basicConfig(level='INFO')
 
 
-METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR']}
+METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR', 'random']}
 for key in ['pen_rf_importance', 'weighted_rf_importance']:
     for implementation in ['impurity', 'permutation']:
         METHODS[f'{key}_{implementation}'] = ft.partial(

@@ -11,7 +11,7 @@ sync : requirements.txt
 	pip-sync
 
 tests :
-	pytest -v -s --cov=cost_based_selection --cov-report=html --cov-report=term
+	pytest -v -s --cov=cost_based_selection --cov-report=html --cov-report=term --disable-warnings
 
 build : tests
 
@@ -73,7 +73,7 @@ ${SIMULATIONS_models_splits} : ${SIMULATION_ROOT}/% : \
 # Ranking
 # =======
 
-METHODS = JMI JMIM mRMR reliefF_distance reliefF_rf_prox pen_rf_importance_impurity \
+METHODS = JMI JMIM mRMR reliefF_distance reliefF_rf_prox pen_rf_importance_impurity random \
 	pen_rf_importance_permutation weighted_rf_importance_impurity weighted_rf_importance_permutation
 PENALTIES = 0.0 0.0125 0.025 0.05 0.1 0.2 0.4 0.8 1.6 3.2 6.4 12.8 25.6 51.2
 RANKING_ROOT = workspace/rankings
