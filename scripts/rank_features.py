@@ -7,9 +7,7 @@ import pickle
 import time
 
 
-logging.basicConfig(level='INFO')
-
-
+# Set up callables for all the different methods.
 METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR', 'random']}
 for key in ['pen_rf_importance', 'weighted_rf_importance']:
     for implementation in ['impurity', 'permutation']:
@@ -22,6 +20,11 @@ for proximity in ['rf prox', 'distance']:
 
 
 def __main__():
+    # Set up basic logging.
+    logging.basicConfig(level='INFO')
+    logger = logging.getLogger('rank_features')
+
+    # Parse arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument('--penalty', help='penalty factor for costly features', type=float,
                         default=0)
@@ -30,10 +33,8 @@ def __main__():
     parser.add_argument('filenames', help='simulation files to load', nargs='+')
     args = parser.parse_args()
 
-    logger = logging.getLogger('rank_features')
-
+    # Load and prepare data for ranking.
     data = preprocessing_utils.load_simulations(args.filenames)
-
     kwargs = {
         'X': data['X'],
         'y': data['y'],
@@ -49,11 +50,10 @@ def __main__():
         'features': data['features'],
     }
     ranking, *_ = METHODS[args.method](**kwargs)
-
-    logger.info('ranked %d features', len(ranking))
-
     result['end'] = time.time()
     result['ranking'] = ranking
+
+    logger.info('ranked %d features in %.1f seconds', len(ranking), result['end'] - result['start'])
 
     # Store the results.
     directory = os.path.dirname(args.output)
