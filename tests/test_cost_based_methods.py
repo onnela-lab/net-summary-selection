@@ -105,10 +105,13 @@ EXPECTED_RANKINGS = {
 }
 
 
+def is_deterministic(name):
+    return not any(x in name for x in ['pen_rf_importance', 'weighted_rf_importance'])
+
+
 def test_method(request: pytest.FixtureRequest, network_data_dict: dict,
                 methods: typing.Iterable[typing.Callable], penalty: float):
-    deterministic = not any(x in request.node.name for x in
-                            ['pen_rf_importance', 'weighted_rf_importance'])
+    deterministic = is_deterministic(request.node.name)
     rankings = []
     for method in methods:
         # Evaluate the ranking for this method and add it to the list for comparison.
@@ -126,6 +129,8 @@ def test_method(request: pytest.FixtureRequest, network_data_dict: dict,
 
 def test_regression(request: pytest.FixtureRequest, methods: typing.Iterable[typing.Callable],
                     penalty: float, synthetic_data_dict: dict):
+    if not is_deterministic(request.node.name):
+        pytest.skip(f"{request.node.name} is not deterministic")
     assert synthetic_data_dict['is_disc'].sum() > 0
 
     for method in methods:
