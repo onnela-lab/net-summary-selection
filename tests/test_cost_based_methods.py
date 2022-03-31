@@ -94,14 +94,6 @@ EXPECTED_RANKINGS = {
     'reliefF-distance-0.001': [1, 2, 0, 4, 3],
     'reliefF-rf prox-0.0': [4, 2, 1, 0, 3],
     'reliefF-rf prox-0.001': [4, 2, 1, 0, 3],
-    'pen_rf_importance-impurity-0.0': [4, 3, 1, 0, 2],
-    'pen_rf_importance-impurity-0.001': [4, 3, 1, 0, 2],
-    'pen_rf_importance-permutation-0.0': [4, 3, 1, 2, 0],
-    'pen_rf_importance-permutation-0.001': [4, 3, 1, 2, 0],
-    'weighted_rf_importance-impurity-0.0': [4, 3, 1, 0, 2],
-    'weighted_rf_importance-impurity-0.001': [4, 3, 1, 0, 2],
-    'weighted_rf_importance-permutation-0.0': [4, 3, 1, 2, 0],
-    'weighted_rf_importance-permutation-0.001': [4, 3, 1, 2, 0],
 }
 
 
@@ -129,8 +121,6 @@ def test_method(request: pytest.FixtureRequest, network_data_dict: dict,
 
 def test_regression(request: pytest.FixtureRequest, methods: typing.Iterable[typing.Callable],
                     penalty: float, synthetic_data_dict: dict):
-    if not is_deterministic(request.node.name):
-        pytest.skip(f"{request.node.name} is not deterministic")
     assert synthetic_data_dict['is_disc'].sum() > 0
 
     for method in methods:
@@ -139,6 +129,11 @@ def test_regression(request: pytest.FixtureRequest, methods: typing.Iterable[typ
         match = re.match(r"^test_regression\[(.*?)\]$", request.node.name)
         assert match, request.node.name
         key = match.group(1)
+
+        if not is_deterministic(request.node.name):
+            message = f"{key} is not deterministic"
+            assert key not in EXPECTED_RANKINGS, message
+            pytest.skip(message)
 
         try:
             np.testing.assert_array_equal(ranking, EXPECTED_RANKINGS[key])
