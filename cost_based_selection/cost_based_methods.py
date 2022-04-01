@@ -96,7 +96,7 @@ def evaluate_conditional_mutual_information(X: np.ndarray, is_disc: np.ndarray, 
 
 
 def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
-         MI_matrix=None):
+         MI_matrix=None, MI_conditional=None):
     """
     Cost-based feature ranking with maximum relevance minimum redundancy.
 

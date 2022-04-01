@@ -31,6 +31,7 @@ setuptools.setup(
             'seaborn>=0.11.0',
             'sklearn',
             'tqdm',
+            'beaver_build',
     ],
     extras_require={
         'tests': [
