@@ -23,6 +23,7 @@ from sklearn.feature_selection import mutual_info_classif
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.ensemble import RandomForestClassifier
 from scipy import spatial
+from .old.cost_based_methods import _private_proximity_matrix
 
 # To use the R package ranger for RF importance computation
 import rpy2.robjects
@@ -686,7 +687,14 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             model = RandomForestClassifier(n_estimators=n_estimators,
                                            min_samples_leaf=min_samples_leaf)
             model.fit(X_std, y)
-            proxMatRF = _private_proximity_matrix(model, X_std, normalize=True)
+            leaves = model.apply(X)
+            num_trees = leaves.shape[1]
+            # TODO: This can likely be sped up many orders of magnitude using cython. Not a priority
+            # at the moment because most other methods are slower.
+            proxMatRF = sum((leaf == leaf[:, None]).astype(int) for leaf in leaves.T) / num_trees
+            if debug:
+                proxMatRF_old = _private_proximity_matrix(model, X_std, normalize=True)
+                np.testing.assert_allclose(proxMatRF, proxMatRF_old)
             proxMat = proxMatRF
         else:
             proxMat = sim_matrix
@@ -765,24 +773,6 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
         return ranking, weightsDic, distMat
     elif proximity == "rf prox":
         return ranking, weightsDic, proxMat
-
-
-def _private_proximity_matrix(model, X, normalize=True):
-    """ Compute the random forest proximity matrix. """
-
-    terminals = model.apply(X)
-    nTrees = terminals.shape[1]
-    a = terminals[:, 0]
-    proxMat = 1*np.equal.outer(a, a)
-
-    for i in range(1, nTrees):
-        a = terminals[:, i]
-        proxMat += 1*np.equal.outer(a, a)
-
-    if normalize:
-        proxMat = proxMat / nTrees
-
-    return proxMat
 
 
 def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=None,
