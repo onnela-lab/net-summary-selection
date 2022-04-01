@@ -18,7 +18,6 @@ for each penalization value.
 import collections
 import copy
 import numpy as np
-from joblib import Parallel, delayed
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.ensemble import RandomForestClassifier
@@ -37,7 +36,7 @@ def random(X, y, is_disc, cost_vec=None, cost_param=0):
 
 
 def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
-         num_cores=1, MI_matrix=None):
+         MI_matrix=None):
     """
     Cost-based feature ranking with maximum relevance minimum redundancy.
 
@@ -70,8 +69,6 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
             the random seed to use with the mutual_information function
             (when computing the Mutual Information (MI) involving one or more
             continuous features).
-        num_cores (int):
-            the number of CPU cores to use in parallel to compute the MI.
         MI_matrix (numpy.ndarray):
             the matrix of precomputed pairwise MI between pairs of features to
             save times when wanting to use multiple cost values.
@@ -118,24 +115,14 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
         matrix_MI = np.zeros((num_features, num_features), dtype=float)
 
         for ii in range(num_features):
-            if num_cores == 1:
-                if is_disc[ii]:  # If the ii-th feature is discrete
-                    # we use the classif version
-                    matrix_MI[ii, :] = mutual_info_classif(X, X[:, ii], discrete_features=is_disc,
-                                                           random_state=random_seed)
-                else:
-                    # otherwise we use the continuous (regression) version
-                    matrix_MI[ii, :] = mutual_info_regression(
-                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
+            if is_disc[ii]:  # If the ii-th feature is discrete
+                # we use the classif version
+                matrix_MI[ii, :] = mutual_info_classif(X, X[:, ii], discrete_features=is_disc,
+                                                       random_state=random_seed)
             else:
-                if is_disc[ii]:
-                    matrix_MI[ii, :] = Parallel(n_jobs=num_cores)(delayed(mutual_info_classif)(
-                        X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
-                        random_state=random_seed) for k in range(num_features))
-                else:
-                    matrix_MI[ii, :] = Parallel(n_jobs=num_cores)(delayed(mutual_info_regression)(
-                        X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
-                        random_state=random_seed) for k in range(num_features))
+                # otherwise we use the continuous (regression) version
+                matrix_MI[ii, :] = mutual_info_regression(
+                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
     else:
         matrix_MI = MI_matrix
 
@@ -163,7 +150,7 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
 
 
 def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
-        num_cores=1, MI_matrix=None, MI_conditional=None):
+        MI_matrix=None, MI_conditional=None):
     """
     Cost-based feature ranking based on Joint Mutual Information.
 
@@ -195,8 +182,6 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
             the random seed to use with the mutual_information function
             (when computing the Mutual Information (MI) involving one or more
             continuous features).
-        num_cores (int):
-            the number of CPU cores to use in parallel to compute the MI and JMI.
         MI_matrix (numpy.ndarray):
             the matrix of precomputed pairwise MI between pairs of features to
             save times when wanting to use multiple cost values.
@@ -256,28 +241,14 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
         matrix_MI_Xk_Xj = np.zeros((num_features, num_features), dtype=float)
 
         for ii in range(num_features):
-            if num_cores == 1:
-                if is_disc[ii]:  # If the ii-th feature is discrete
-                    # we use the classif version
-                    matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
-                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
-                else:
-                    # otherwise we use the continuous (regression) version
-                    matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
-                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
-
+            if is_disc[ii]:  # If the ii-th feature is discrete
+                # we use the classif version
+                matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
+                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
             else:
-                if is_disc[ii]:
-                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
-                        delayed(mutual_info_classif)(
-                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
-                            random_state=random_seed) for k in range(num_features))
-                else:
-                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
-                        delayed(mutual_info_regression)(
-                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
-                            random_state=random_seed) for k in range(num_features))
-
+                # otherwise we use the continuous (regression) version
+                matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
+                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
     else:
         matrix_MI_Xk_Xj = MI_matrix
 
@@ -312,32 +283,16 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
 
             # Fill the matrix
             for ii in range(num_features):
-                if num_cores == 1:
-                    if is_discForSubX[ii]:
-                        matTmp[ii, :] = proValY * mutual_info_classif(
-                            subX, subX[:, ii], discrete_features=is_discForSubX,
-                            random_state=random_seed)
-                    else:
-                        matTmp[ii, :] = proValY * mutual_info_regression(
-                            subX, subX[:, ii], discrete_features=is_discForSubX,
-                            random_state=random_seed)
-
+                if is_discForSubX[ii]:
+                    matTmp[ii, :] = proValY * mutual_info_classif(
+                        subX, subX[:, ii], discrete_features=is_discForSubX,
+                        random_state=random_seed)
                 else:
-                    if is_discForSubX[ii]:
-                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_classif)(
-                            subX[:, k].reshape(-1, 1), subX[:, ii],
-                            discrete_features=is_discForSubX[k], random_state=random_seed
-                        ) for k in range(num_features))
-                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
-                    else:
-                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_regression)(
-                            subX[:, k].reshape(-1, 1), subX[:, ii],
-                            discrete_features=is_discForSubX[k], random_state=random_seed
-                        ) for k in range(num_features))
-                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
+                    matTmp[ii, :] = proValY * mutual_info_regression(
+                        subX, subX[:, ii], discrete_features=is_discForSubX,
+                        random_state=random_seed)
 
             MI_condY[valY] = matTmp
-
     else:
         MI_condY = MI_conditional
 
@@ -372,8 +327,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
     return ranking, matrix_MI_Xk_Xj, MI_condY
 
 
-def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
-         num_features_to_select=None, random_seed=123, num_cores=1,
+def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
          MI_matrix=None, MI_conditional=None):
     """ Cost-based feature ranking based on Joint Mutual Information Maximization.
 
@@ -405,8 +359,6 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
             the random seed to use with the mutual_information function
             (when computing the Mutual Information (MI) involving one or more
             continuous features).
-        num_cores (int):
-            the number of CPU cores to use in parallel to compute the MI and JMI.
         MI_matrix (numpy.ndarray):
             the matrix of precomputed pairwise MI between pairs of features to
             save times when wanting to use multiple cost values.
@@ -460,29 +412,14 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
         matrix_MI_Xk_Xj = np.zeros((num_features, num_features), dtype=float)
 
         for ii in range(num_features):
-            if num_cores == 1:
-                if is_disc[ii]:  # If the ii-th feature is discrete
-                    # we use the classif version
-                    matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
-                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
-                else:
-                    # otherwise we use the continuous (regression) version
-                    matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
-                        X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
+            if is_disc[ii]:  # If the ii-th feature is discrete
+                # we use the classif version
+                matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
+                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
             else:
-                if is_disc[ii]:
-                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
-                        delayed(mutual_info_classif)(
-                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
-                            random_state=random_seed
-                        ) for k in range(num_features))
-                else:
-                    matrix_MI_Xk_Xj[ii, :] = Parallel(n_jobs=num_cores)(
-                        delayed(mutual_info_regression)(
-                            X[:, k].reshape(-1, 1), X[:, ii], discrete_features=is_disc[k],
-                            random_state=random_seed
-                        ) for k in range(num_features))
-
+                # otherwise we use the continuous (regression) version
+                matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
+                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
     else:
         matrix_MI_Xk_Xj = MI_matrix
 
@@ -517,32 +454,16 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
 
             # Fill the matrix
             for ii in range(num_features):
-                if num_cores == 1:
-                    if is_discForSubX[ii]:  # If the ii-th feature is discrete
-                        # we use the classif version
-                        matTmp[ii, :] = proValY * mutual_info_classif(
-                            subX, subX[:, ii], discrete_features=is_discForSubX,
-                            random_state=random_seed)
-                    else:
-                        # otherwise we use the continuous (regression) version
-                        matTmp[ii, :] = proValY * mutual_info_regression(
-                            subX, subX[:, ii], discrete_features=is_discForSubX,
-                            random_state=random_seed)
-
+                if is_discForSubX[ii]:  # If the ii-th feature is discrete
+                    # we use the classif version
+                    matTmp[ii, :] = proValY * mutual_info_classif(
+                        subX, subX[:, ii], discrete_features=is_discForSubX,
+                        random_state=random_seed)
                 else:
-                    if is_discForSubX[ii]:
-                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_classif)(
-                            subX[:, k].reshape(-1, 1), subX[:, ii],
-                            discrete_features=is_discForSubX[k], random_state=random_seed
-                        ) for k in range(num_features))
-                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
-                    else:
-                        vecToMultiply = Parallel(n_jobs=num_cores)(delayed(mutual_info_regression)(
-                            subX[:, k].reshape(-1, 1), subX[:, ii],
-                            discrete_features=is_discForSubX[k], random_state=random_seed
-                        ) for k in range(num_features))
-                        matTmp[ii, :] = [proValY * val for val in vecToMultiply]
-
+                    # otherwise we use the continuous (regression) version
+                    matTmp[ii, :] = proValY * mutual_info_regression(
+                        subX, subX[:, ii], discrete_features=is_discForSubX,
+                        random_state=random_seed)
             MI_condY[valY] = matTmp
     else:
         MI_condY = MI_conditional
