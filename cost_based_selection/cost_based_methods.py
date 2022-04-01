@@ -35,6 +35,25 @@ def random(X, y, is_disc, cost_vec=None, cost_param=0):
     return [np.random.permutation(X.shape[1])]
 
 
+def evaluate_MI_matrix(X: np.ndarray, is_disc: np.ndarray, random_seed: int = 123) -> np.ndarray:
+    """
+    Compute all pairwise mutual information scores.
+    """
+    _, num_features = X.shape
+    matrix_MI = np.zeros((num_features, num_features), dtype=float)
+
+    for ii in range(num_features):
+        if is_disc[ii]:  # If the ii-th feature is discrete
+            # we use the classif version
+            matrix_MI[ii, :] = mutual_info_classif(X, X[:, ii], discrete_features=is_disc,
+                                                   random_state=random_seed)
+        else:
+            # otherwise we use the continuous (regression) version
+            matrix_MI[ii, :] = mutual_info_regression(X, X[:, ii], discrete_features=is_disc,
+                                                      random_state=random_seed)
+    return matrix_MI
+
+
 def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
          MI_matrix=None):
     """
@@ -110,19 +129,7 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
     initial_scores_mcost = initial_scores - cost_param*cost_vec
 
     if MI_matrix is None:
-        # Compute all the pairwise mutual info depending on if the feature
-        # is discrete or continuous
-        matrix_MI = np.zeros((num_features, num_features), dtype=float)
-
-        for ii in range(num_features):
-            if is_disc[ii]:  # If the ii-th feature is discrete
-                # we use the classif version
-                matrix_MI[ii, :] = mutual_info_classif(X, X[:, ii], discrete_features=is_disc,
-                                                       random_state=random_seed)
-            else:
-                # otherwise we use the continuous (regression) version
-                matrix_MI[ii, :] = mutual_info_regression(
-                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
+        matrix_MI = evaluate_MI_matrix(X, is_disc, random_seed)
     else:
         matrix_MI = MI_matrix
 
@@ -236,19 +243,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
     initial_scores_mcost = initial_scores - cost_param * cost_vec
 
     if MI_matrix is None:
-        # Compute all the pairwise mutual info depending on if the feature
-        # is discrete or continuous
-        matrix_MI_Xk_Xj = np.zeros((num_features, num_features), dtype=float)
-
-        for ii in range(num_features):
-            if is_disc[ii]:  # If the ii-th feature is discrete
-                # we use the classif version
-                matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
-                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
-            else:
-                # otherwise we use the continuous (regression) version
-                matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
-                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
+        matrix_MI_Xk_Xj = evaluate_MI_matrix(X, is_disc, random_seed)
     else:
         matrix_MI_Xk_Xj = MI_matrix
 
@@ -407,19 +402,7 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
     initial_scores_mcost = initial_scores - cost_param*cost_vec
 
     if MI_matrix is None:
-        # Compute all the pairwise mutual info depending on if the feature
-        # is discrete or continuous
-        matrix_MI_Xk_Xj = np.zeros((num_features, num_features), dtype=float)
-
-        for ii in range(num_features):
-            if is_disc[ii]:  # If the ii-th feature is discrete
-                # we use the classif version
-                matrix_MI_Xk_Xj[ii, :] = mutual_info_classif(
-                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
-            else:
-                # otherwise we use the continuous (regression) version
-                matrix_MI_Xk_Xj[ii, :] = mutual_info_regression(
-                    X, X[:, ii], discrete_features=is_disc, random_state=random_seed)
+        matrix_MI_Xk_Xj = evaluate_MI_matrix(X, is_disc, random_seed)
     else:
         matrix_MI_Xk_Xj = MI_matrix
 
