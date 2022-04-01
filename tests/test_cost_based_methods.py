@@ -5,8 +5,7 @@ from cost_based_selection import preprocessing_utils
 import functools as ft
 import numpy as np
 import pytest
-import re
-from scipy import special
+from scipy import special, stats
 import typing
 
 
@@ -41,13 +40,20 @@ def network_data_dict():
     'pen_rf_importance-permutation', 'weighted_rf_importance-impurity',
     'weighted_rf_importance-permutation'
 ])
-def methods(request):
+def method_name(request):
+    return request.param
+
+
+@pytest.fixture
+def methods(method_name: str):
     results = []
     for module in [cost_based_methods, cost_based_methods_old]:
-        name, *args = request.param.split('-')
+        name, *args = method_name.split('-')
         func = getattr(module, name)
         if func is module.reliefF:
             func = ft.partial(func, proximity=args[0])
+            if module is cost_based_methods:
+                func = ft.partial(func, debug=True)
         elif func in (module.pen_rf_importance, module.weighted_rf_importance):
             func = ft.partial(func, imp_type=args[0])
         results.append(func)
@@ -101,9 +107,9 @@ def is_deterministic(name):
     return not any(x in name for x in ['pen_rf_importance', 'weighted_rf_importance'])
 
 
-def test_method(request: pytest.FixtureRequest, network_data_dict: dict,
+def test_method(method_name: str, network_data_dict: dict,
                 methods: typing.Iterable[typing.Callable], penalty: float):
-    deterministic = is_deterministic(request.node.name)
+    deterministic = is_deterministic(method_name)
     rankings = []
     for method in methods:
         # Evaluate the ranking for this method and add it to the list for comparison.
@@ -114,23 +120,27 @@ def test_method(request: pytest.FixtureRequest, network_data_dict: dict,
         if deterministic:
             ranking2, *_ = method(**network_data_dict, cost_param=penalty)
             np.testing.assert_array_equal(ranking, ranking2)
-    # Can only compare old and new implementation for deterministic tests.
-    if deterministic:
+    # These methods have changed ever so slightly due to different distance evaluations. But the
+    # rankings remain highly correlated.
+    if method_name.startswith('reliefF'):
+        corr, pval = stats.spearmanr(*rankings)
+        assert corr > 0.5
+        assert pval < 1e-3
+    elif deterministic:
+        # Can only compare old and new implementation for deterministic tests.
         np.testing.assert_array_equal(*rankings)
 
 
-def test_regression(request: pytest.FixtureRequest, methods: typing.Iterable[typing.Callable],
+def test_regression(method_name: str, methods: typing.Iterable[typing.Callable],
                     penalty: float, synthetic_data_dict: dict):
     assert synthetic_data_dict['is_disc'].sum() > 0
 
     for method in methods:
         ranking, *_ = method(**synthetic_data_dict, cost_param=penalty)
 
-        match = re.match(r"^test_regression\[(.*?)\]$", request.node.name)
-        assert match, request.node.name
-        key = match.group(1)
+        key = f'{method_name}-{penalty}'
 
-        if not is_deterministic(request.node.name):
+        if not is_deterministic(method_name):
             message = f"{key} is not deterministic"
             assert key not in EXPECTED_RANKINGS, message
             pytest.skip(message)

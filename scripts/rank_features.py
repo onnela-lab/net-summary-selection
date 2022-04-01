@@ -53,7 +53,8 @@ def __main__():
     result['end'] = time.time()
     result['ranking'] = ranking
 
-    logger.info('ranked %d features in %.1f seconds', len(ranking), result['end'] - result['start'])
+    logger.info('ranked %d features in %.1f seconds using %s', len(ranking),
+                result['end'] - result['start'], args.method)
 
     # Store the results.
     directory = os.path.dirname(args.output)

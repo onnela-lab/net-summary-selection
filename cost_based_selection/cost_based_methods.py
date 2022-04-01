@@ -22,6 +22,7 @@ from joblib import Parallel, delayed
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.ensemble import RandomForestClassifier
+from scipy import spatial
 
 # To use the R package ranger for RF importance computation
 import rpy2.robjects
@@ -162,7 +163,8 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
 
 def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
         num_cores=1, MI_matrix=None, MI_conditional=None):
-    """ Cost-based feature ranking based on Joint Mutual Information.
+    """
+    Cost-based feature ranking based on Joint Mutual Information.
 
     Cost-based adaptation of the filter feature selection algorithm based on
     Joint Mutual Information (Yang and Moody (1999)).
@@ -245,7 +247,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
     initial_scores = mutual_info_classif(X, y, discrete_features=is_disc, random_state=random_seed)
 
     # The cost based will substract lambda*cost for each item of initial_scores
-    initial_scores_mcost = initial_scores - cost_param*cost_vec
+    initial_scores_mcost = initial_scores - cost_param * cost_vec
 
     if MI_matrix is None:
         # Compute all the pairwise mutual info depending on if the feature
@@ -577,7 +579,7 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0,
 
 def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to_select=None,
             proximity="distance", min_samples_leaf=100, n_estimators=500, sim_matrix=None,
-            is_disc=None):
+            is_disc=None, debug=False):
     """ Cost-based feature ranking adaptation of the ReliefF algorithm.
 
     Cost-based adaptation of the ReliefF algorithm, where the nearest neighbors
@@ -668,18 +670,12 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
     # Compute for each covariate the max and min values. Useful for L1 dist.
     maxXVal = np.max(X_std, axis=0)
     minXVal = np.min(X_std, axis=0)
+    X_norm = X_std / (maxXVal - minXVal)
 
     # If we use the classic (Manhattan) distance:
     if proximity == "distance":
         if sim_matrix is None:
-            # Compute all pairs of distance between training data
-            distMat = np.zeros(shape=(nTrain, nTrain), dtype=float)
-
-            for i in range(nTrain-1):
-                for j in range(i+1, nTrain, 1):
-                    distMat[i, j] = _private_man_dist(X_std[i, :], X_std[j, :], minXVal, maxXVal)
-                    distMat[j, i] = distMat[i, j]
-
+            distMat = spatial.distance.squareform(spatial.distance.pdist(X_norm, 'cityblock'))
         else:
             distMat = sim_matrix
 
@@ -730,22 +726,29 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
 
         # Compute the elements diff(A, R_i, H_j) for j in 1:k, per feature A
         for cov in range(nCov):
-            compDistRiFromHits = [
-                np.abs(X_std[i, cov] - X_std[hit, cov])/(maxXVal[cov] - minXVal[cov])
-                for hit in kNearHits
-            ]
+            compDistRiFromHits = np.abs(X_norm[i, cov] - X_norm[kNearHits, cov])
+            if debug:
+                compDistRiFromHits_old = [
+                    np.abs(X_std[i, cov] - X_std[hit, cov])/(maxXVal[cov] - minXVal[cov])
+                    for hit in kNearHits
+                ]
+                np.testing.assert_allclose(compDistRiFromHits, compDistRiFromHits_old, atol=1e-9)
             weightsDic[cov] -= np.mean(compDistRiFromHits)/m
 
             # For each class different from the one of R_i, do the same with
             # weight by prior proba ratio
             for c in range(len(classDifRi)):
-                tmp = classDifRi[c]
-                compDistRiFromMisses = [
-                    np.abs(X_std[i, cov] - X_std[miss, cov])/(maxXVal[cov] - minXVal[cov])
-                    for miss in kNearMisses[c]
-                ]
+                compDistRiFromMisses = np.abs(X_norm[i, cov] - X_norm[kNearMisses[c], cov])
+                if debug:
+                    compDistRiFromMisses_old = [
+                        np.abs(X_std[i, cov] - X_std[miss, cov])/(maxXVal[cov] - minXVal[cov])
+                        for miss in kNearMisses[c]
+                    ]
+                    np.testing.assert_allclose(compDistRiFromMisses, compDistRiFromMisses_old,
+                                               atol=1e-9)
 
                 # Reminder: pClasses is a dictionary
+                tmp = classDifRi[c]
                 weightsDic[cov] += (pClasses[tmp] / (1-pClasses[y[i]])) \
                     * np.mean(compDistRiFromMisses) / m
 
@@ -762,16 +765,6 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
         return ranking, weightsDic, distMat
     elif proximity == "rf prox":
         return ranking, weightsDic, proxMat
-
-
-def _private_man_dist(inst1, inst2, minXVal, maxXVal):
-    """ Compute the Manhattan distance between two set of covariates. """
-
-    nCov = len(inst1)
-    dist_comp = [np.abs(inst1[i] - inst2[i])/(maxXVal[i] - minXVal[i])
-                 for i in range(nCov)]
-    dist = np.sum(dist_comp)
-    return dist
 
 
 def _private_proximity_matrix(model, X, normalize=True):
