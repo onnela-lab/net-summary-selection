@@ -91,3 +91,11 @@ ${RANKING_TARGETS_models_splits_methods} : ${RANKING_ROOT}/% : $$(addprefix $$@/
 ${RANKING_TARGETS} : ${RANKING_ROOT}/%.pkl : $${SIMULATIONS_$$(call wordx,$$*,1,/)_$$(call wordx,$$*,2,/)}
 	NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python scripts/rank_features.py \
 		--penalty=$(call wordx,$*,4,/) $(call wordx,$*,3,/) $@ $^
+
+# Profiling targets.
+PROFILING_TARGETS = $(addprefix ${RANKING_ROOT}/ba/,${METHODS:=.prof})
+${RANKING_ROOT}/ba/prof : ${PROFILING_TARGETS}
+${PROFILING_TARGETS} : ${RANKING_ROOT}/ba/%.prof :
+	NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 python -m cProfile -o $@ scripts/rank_features.py \
+		--penalty=0.01 $* /tmp/$*.pkl ${SIMULATIONS_ba_train}
+	rm -rf /tmp/$*.pkl
