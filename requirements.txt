@@ -6,6 +6,10 @@
 #
 -e file:.
     # via -r requirements.in
+aiohttp==3.8.1
+    # via beaver-build
+aiosignal==1.2.0
+    # via aiohttp
 appnope==0.1.2
     # via
     #   ipykernel
@@ -16,12 +20,17 @@ argon2-cffi-bindings==21.2.0
     # via argon2-cffi
 asttokens==2.0.5
     # via stack-data
+async-timeout==4.0.2
+    # via aiohttp
 attrs==21.4.0
     # via
+    #   aiohttp
     #   jsonschema
     #   pytest
 backcall==0.2.0
     # via ipython
+beaver-build==0.1.2
+    # via cost-based-selection
 black==22.1.0
     # via ipython
 bleach==4.1.0
@@ -30,6 +39,8 @@ cffi==1.15.0
     # via
     #   argon2-cffi-bindings
     #   rpy2
+charset-normalizer==2.0.12
+    # via aiohttp
 click==8.0.4
     # via black
 coverage[toml]==6.3.1
@@ -52,6 +63,12 @@ flake8==4.0.1
     # via cost-based-selection
 fonttools==4.29.1
     # via matplotlib
+frozenlist==1.3.0
+    # via
+    #   aiohttp
+    #   aiosignal
+idna==3.3
+    # via yarl
 iniconfig==1.1.1
     # via pytest
 ipykernel==6.9.1
@@ -128,6 +145,10 @@ mccabe==0.6.1
     # via flake8
 mistune==0.8.4
     # via nbconvert
+multidict==6.0.2
+    # via
+    #   aiohttp
+    #   yarl
 mypy-extensions==0.4.3
     # via black
 nbclient==0.5.11
@@ -316,6 +337,8 @@ webencodings==0.5.1
     # via bleach
 widgetsnbextension==3.5.2
     # via ipywidgets
+yarl==1.7.2
+    # via aiohttp
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

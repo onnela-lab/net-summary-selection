@@ -28,6 +28,7 @@ def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument('--penalty', help='penalty factor for costly features', type=float,
                         default=0)
+    parser.add_argument('--mi', help='precomputed mutual information')
     parser.add_argument('method', help='method to use for ranking features', choices=METHODS)
     parser.add_argument('output', help='output path for the reference table')
     parser.add_argument('filenames', help='simulation files to load', nargs='+')
@@ -43,13 +44,23 @@ def __main__():
         'cost_param': args.penalty,
     }
 
+    # Get the method and add precomputed mutual information.
+    method = METHODS[args.method]
+    if args.method in ['JMI', 'JMIM', 'mRMR']:
+        with open(args.mi, 'rb') as fp:
+            mutual_info = pickle.load(fp)
+        method = ft.partial(method, MI_matrix=mutual_info['marginal'],
+                            MI_conditional=mutual_info['conditional'])
+    else:
+        assert not args.mi, f"cannot use mutual information with {args.method}"
+
     # Run the analysis.
     result = {
         'args': vars(args),
         'start': time.time(),
         'features': data['features'],
     }
-    ranking, *_ = METHODS[args.method](**kwargs)
+    ranking, *_ = method(**kwargs)
     result['end'] = time.time()
     result['ranking'] = ranking
 
