@@ -23,6 +23,7 @@ from sklearn.feature_selection import mutual_info_regression
 from sklearn.ensemble import RandomForestClassifier
 from scipy import spatial
 from .old.cost_based_methods import _private_proximity_matrix
+from ._util import evaluate_proximity_matrix
 
 # To use the R package ranger for RF importance computation
 import rpy2.robjects
@@ -563,11 +564,7 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             model = RandomForestClassifier(n_estimators=n_estimators,
                                            min_samples_leaf=min_samples_leaf)
             model.fit(X_std, y)
-            leaves = model.apply(X)
-            num_trees = leaves.shape[1]
-            # TODO: This can likely be sped up many orders of magnitude using cython. Not a priority
-            # at the moment because most other methods are slower.
-            proxMatRF = sum((leaf == leaf[:, None]).astype(int) for leaf in leaves.T) / num_trees
+            proxMatRF = evaluate_proximity_matrix(model.apply(X_std))
             if debug:
                 proxMatRF_old = _private_proximity_matrix(model, X_std, normalize=True)
                 np.testing.assert_allclose(proxMatRF, proxMatRF_old)

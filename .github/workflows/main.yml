@@ -26,7 +26,10 @@ jobs:
             ${{ env.R_LIBS_USER }}/*
           key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}-R-cache
       - name: "Install dependencies"
-        run: "pip install -r requirements.txt"
+        run: |
+          # Install cython first because we need it for setup.py.
+          pip install `cat requirements.txt | grep cython`
+          pip install -r requirements.txt
       - name: "Build the project"
         run: "make build"
         env:
