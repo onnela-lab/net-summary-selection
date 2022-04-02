@@ -1,4 +1,6 @@
 import setuptools
+from Cython.Build import cythonize
+
 
 with open("DESCRIPTION.md", "r") as fh:
     long_description = fh.read()
@@ -20,7 +22,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
+    ext_modules=cythonize('cost_based_selection/*.pyx', annotate=True),
     install_requires=[
+            'cython',
             'joblib>=0.17.0',
             'matplotlib>=3.3.2',
             'networkx>=2.5',
