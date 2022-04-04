@@ -29,11 +29,28 @@ from ._util import evaluate_proximity_matrix
 import rpy2.robjects
 
 
-def random(X, y, is_disc, cost_vec=None, cost_param=0):
+def random_ranking(X, y, is_disc, cost_vec=None, cost_param=0):
     """
     Return a random feature ranking.
     """
-    return [np.random.permutation(X.shape[1])]
+    # Select features sequentially proportional to their inverse selection probability.
+    if cost_vec is None:
+        proba = np.ones(X.shape[1])
+    else:
+        assert cost_vec.shape == (X.shape[1],)
+        proba = cost_vec ** -cost_param
+
+    # "Rank" the features by sequentially selecting them proportional to the given probability. We
+    # first convert to lists because they are easier to deal with for sequential sampling.
+    candidates = list(np.arange(proba.size))
+    proba = list(proba)
+    ranking = []
+    while candidates:
+        # We need to renormalize the probabilities each time.
+        idx = np.random.choice(len(proba), p=np.asarray(proba) / np.sum(proba))
+        ranking.append(candidates.pop(idx))
+        proba.pop(idx)
+    return ranking,
 
 
 def evaluate_pairwise_mutual_information(X: np.ndarray, is_disc: np.ndarray,

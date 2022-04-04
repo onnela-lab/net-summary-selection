@@ -10,7 +10,7 @@ setuptools.setup(
     version="0.1",
     author="Louis Raynal, Jukka-Pekka Onnela",
     author_email="onnela@hsph.harvard.edu",
-    description="A package containing implementations of various cost-based feature selection methods.",
+    description="A package implementing various cost-based feature selection methods.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/onnela-lab/net_summary_selection",

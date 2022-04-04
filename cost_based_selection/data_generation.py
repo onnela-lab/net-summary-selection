@@ -12,7 +12,6 @@ import pandas as pd
 import random
 import scipy.stats as ss
 from cost_based_selection import summaries
-from joblib import Parallel, delayed
 
 
 def BA_ref_table(num_sim_model, num_nodes):

@@ -8,7 +8,8 @@ import time
 
 
 # Set up callables for all the different methods.
-METHODS = {key: getattr(cost_based_methods, key) for key in ['JMI', 'JMIM', 'mRMR', 'random']}
+METHODS = {key: getattr(cost_based_methods, key) for key
+           in ['JMI', 'JMIM', 'mRMR', 'random_ranking']}
 for key in ['pen_rf_importance', 'weighted_rf_importance']:
     for implementation in ['impurity', 'permutation']:
         METHODS[f'{key}_{implementation}'] = ft.partial(

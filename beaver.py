@@ -37,7 +37,7 @@ for model in MODELS:
 # Generate rankings.
 METHODS = [
     'JMI', 'JMIM', 'mRMR', 'reliefF_distance', 'reliefF_rf_prox', 'pen_rf_importance_impurity',
-    'random', 'pen_rf_importance_permutation', 'weighted_rf_importance_impurity',
+    'random_ranking', 'pen_rf_importance_permutation', 'weighted_rf_importance_impurity',
     'weighted_rf_importance_permutation'
 ]
 RANKING_SPLITS = ['train', 'small', 'medium']

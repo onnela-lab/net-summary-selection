@@ -38,7 +38,7 @@ def network_data_dict():
 @pytest.fixture(params=[
     'JMI', 'JMIM', 'mRMR', 'reliefF-distance', 'reliefF-rf prox', 'pen_rf_importance-impurity',
     'pen_rf_importance-permutation', 'weighted_rf_importance-impurity',
-    'weighted_rf_importance-permutation'
+    'weighted_rf_importance-permutation', 'random',
 ])
 def method_name(request):
     return request.param
@@ -49,13 +49,16 @@ def methods(method_name: str):
     results = []
     for module in [cost_based_methods, cost_based_methods_old]:
         name, *args = method_name.split('-')
-        func = getattr(module, name)
-        if func is module.reliefF:
-            func = ft.partial(func, proximity=args[0])
-            if module is cost_based_methods:
-                func = ft.partial(func, debug=True)
-        elif func in (module.pen_rf_importance, module.weighted_rf_importance):
-            func = ft.partial(func, imp_type=args[0])
+        try:
+            func = getattr(module, name)
+            if func is module.reliefF:
+                func = ft.partial(func, proximity=args[0])
+                if module is cost_based_methods:
+                    func = ft.partial(func, debug=True)
+            elif func in (module.pen_rf_importance, module.weighted_rf_importance):
+                func = ft.partial(func, imp_type=args[0])
+        except AttributeError:
+            func = None
         results.append(func)
     return results
 
@@ -104,7 +107,7 @@ EXPECTED_RANKINGS = {
 
 
 def is_deterministic(name):
-    return not any(x in name for x in ['pen_rf_importance', 'weighted_rf_importance'])
+    return not any(x in name for x in ['pen_rf_importance', 'weighted_rf_importance', 'random'])
 
 
 def test_method(method_name: str, network_data_dict: dict,
@@ -112,6 +115,8 @@ def test_method(method_name: str, network_data_dict: dict,
     deterministic = is_deterministic(method_name)
     rankings = []
     for method in methods:
+        if method is None:
+            continue
         # Evaluate the ranking for this method and add it to the list for comparison.
         ranking, *_ = method(**network_data_dict, cost_param=penalty)
         np.testing.assert_array_equal(np.unique(ranking), np.arange(len(ranking)))
@@ -136,6 +141,8 @@ def test_regression(method_name: str, methods: typing.Iterable[typing.Callable],
     assert synthetic_data_dict['is_disc'].sum() > 0
 
     for method in methods:
+        if method is None:
+            continue
         ranking, *_ = method(**synthetic_data_dict, cost_param=penalty)
 
         key = f'{method_name}-{penalty}'
