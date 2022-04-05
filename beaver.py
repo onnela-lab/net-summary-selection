@@ -47,7 +47,9 @@ RANKING_ROOT = ROOT / 'rankings'
 # Iterate over all combinations of models and splits for which to rank features.
 mi_script = bb.File('scripts/evaluate_mutual_information.py')
 rank_script = bb.File('scripts/rank_features.py')
+eval_script = bb.File('scripts/evaluate_ranked_features.py')
 for model, split in it.product(MODELS, RANKING_SPLITS):
+    test_data = bb.Group(SIMULATION_ROOT / model / 'test')
     with bb.group_artifacts(RANKING_ROOT, model, split):
         # Get the simulations we're going to need.
         sims = SIMULATIONS[(model, split)]
@@ -57,12 +59,19 @@ for model, split in it.product(MODELS, RANKING_SPLITS):
         mutual_info, = bb.Subprocess(['mutual_information.pkl'], sims, args)
 
         # Run all the methods, adding the precomputed mutual information to some methods.
-        for method, penalty in it.product(METHODS, PENALTIES):
+        for method in METHODS:
             with bb.group_artifacts(method):
-                inputs = list(sims)
-                args = ['$!', rank_script, f'--penalty={penalty}', method, '$@']
-                if method in ['JMI', 'JMIM', 'mRMR']:
-                    args.append(f'--mi={mutual_info}')
-                    inputs.append(mutual_info)
-                args.extend(sims)
-                bb.Subprocess(f'{penalty}.pkl', inputs, args)
+                rankings = []
+                for penalty in PENALTIES:
+                    inputs = list(sims)
+                    args = ['$!', rank_script, f'--penalty={penalty}', method, '$@']
+                    if method in ['JMI', 'JMIM', 'mRMR']:
+                        args.append(f'--mi={mutual_info}')
+                        inputs.append(mutual_info)
+                    args.extend(sims)
+                    rankings.extend(bb.Subprocess(f'{penalty}.pkl', inputs, args))
+
+            # Run the evaluation.
+            ranking_path = bb.Group(method)
+            args = ['$!', eval_script, ranking_path.name, test_data.name, '$@']
+            bb.Subprocess(f'{method}_eval.pkl', rankings + SIMULATIONS[(model, "test")], args)
