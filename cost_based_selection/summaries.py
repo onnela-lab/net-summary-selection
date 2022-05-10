@@ -1,8 +1,35 @@
 import time
 import numpy as np
+import networkit as nk
 import networkx as nx
 from scipy import stats
 import typing
+
+
+def global_efficiency(graph, distances: np.ndarray = None):
+    if distances is None:
+        apsp = nk.distance.APSP(graph)
+        apsp.run()
+        distances = np.asarray(apsp.getDistances())
+    distances = distances[(distances > 0) & (distances < graph.numberOfNodes())]
+    if distances.size == 0:
+        return 0
+    denom = (graph.numberOfNodes() - 1) * graph.numberOfNodes()
+    return np.sum(1 / distances) / denom
+
+
+def get_compacted_subgraph(graph, nodes):
+    subgraph = nk.graphtools.subgraphFromNodes(graph, nodes)
+    node_ids = nk.graphtools.getContinuousNodeIds(subgraph)
+    return nk.graphtools.getCompactedGraph(subgraph, node_ids)
+
+
+def local_efficiency(graph):
+    efficiencies = []
+    for node in graph.iterNodes():
+        subgraph = get_compacted_subgraph(graph, graph.iterNeighbors(node))
+        efficiencies.append(global_efficiency(subgraph))
+    return np.mean(efficiencies)
 
 
 class SummaryResults:
@@ -93,6 +120,9 @@ def compute_summaries(graph: nx.Graph, return_full_results: bool = False,
         include_connectivity: Whether to include edge and node connectivity, two very expensive
             summary statistics.
     """
+    # Convert to networkit graph for faster performance.
+    nkgraph: nk.Graph = nk.nxadapter.nx2nk(graph)
+
     results = SummaryResults()
 
     with results('avg_deg_connectivity', False):
@@ -127,7 +157,9 @@ def compute_summaries(graph: nx.Graph, return_full_results: bool = False,
 
     # Betweenness centrality measures.
     with results('betweenness_centrality', None):
-        betweenness = np.asarray(list(nx.betweenness_centrality(graph).values()))
+        betweenness = nk.centrality.Betweenness(nkgraph, normalized=True)
+        betweenness.run()
+        betweenness = np.asarray(betweenness.scores())
 
     with results('betweenness_centrality_mean', False, depends_on=['betweenness_centrality']):
         results.value = betweenness.mean()
@@ -165,7 +197,8 @@ def compute_summaries(graph: nx.Graph, return_full_results: bool = False,
 
     # Square clustering information.
     with results('square_clustering', None):
-        square_clustering = np.asarray(list(nx.square_clustering(graph).values()))
+        lscc = nk.centrality.LocalSquareClusteringCoefficient(nkgraph)
+        square_clustering = np.asarray(lscc.run().scores())
 
     square_clustering_stats = {
         'mean': np.mean,
@@ -192,8 +225,11 @@ def compute_summaries(graph: nx.Graph, return_full_results: bool = False,
             results.value = len(nx.k_shell(graph, shell, core_number))
 
     with results('shortest_path_lengths', None):
-        shortest_path_lengths = dict(nx.all_pairs_shortest_path_length(graph))
-        shortest_path_lengths_np = dod2array(shortest_path_lengths, graph.number_of_nodes(), np.inf)
+        # shortest_path_lengths = dict(nx.all_pairs_shortest_path_length(graph))
+        # shortest_path_lengths_np = dod2array(shortest_path_lengths, graph.number_of_nodes(),
+        #                                      np.inf)
+        apsp = nk.distance.APSP(nkgraph).run()
+        shortest_path_lengths_np = np.asarray(apsp.getDistances())
 
     for length in [3, 4, 5, 6]:
         with results(f'num_shortest_{length}paths', True, depends_on=['shortest_path_lengths']):
@@ -219,6 +255,7 @@ def compute_summaries(graph: nx.Graph, return_full_results: bool = False,
     with results('largest_connected_component', None, depends_on=['connected_components']):
         nodes = max(components, key=len)
         largest_connected_component = graph.subgraph(nodes).copy()
+    nklcc = nk.nxadapter.nx2nk(largest_connected_component)
 
     with results('num_edges_LCC', True, depends_on=['largest_connected_component']):
         results.value = largest_connected_component.number_of_edges()
@@ -248,7 +285,8 @@ def compute_summaries(graph: nx.Graph, return_full_results: bool = False,
         ])
 
     with results('avg_local_efficiency_LCC', False, depends_on=['largest_connected_component']):
-        results.value = nx.local_efficiency(largest_connected_component)
+        # results.value = nx.local_efficiency(largest_connected_component)
+        results.value = local_efficiency(nklcc)
 
     if include_connectivity:
         with results('node_connectivity_LCC', True, depends_on=['largest_connected_component']):

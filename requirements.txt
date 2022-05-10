@@ -171,6 +171,8 @@ nest-asyncio==1.5.4
     #   jupyter-client
     #   nbclient
     #   notebook
+networkit==9.1.1
+    # via cost-based-selection
 networkx==2.6.3
     # via cost-based-selection
 notebook==6.4.8
@@ -181,6 +183,7 @@ numpy==1.22.2
     # via
     #   cost-based-selection
     #   matplotlib
+    #   networkit
     #   pandas
     #   scikit-learn
     #   scipy
@@ -277,6 +280,7 @@ scikit-learn==1.0.2
 scipy==1.8.0
     # via
     #   cost-based-selection
+    #   networkit
     #   scikit-learn
     #   seaborn
 seaborn==0.11.2
