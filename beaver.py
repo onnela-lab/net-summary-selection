@@ -7,6 +7,7 @@ import pathlib
 bb.Subprocess.ENV.update({
     'NUMEXPR_NUM_THREADS': 1,
     'OPENBLAS_NUM_THREADS': 1,
+    'OMP_NUM_THREADS': 1,
 })
 ROOT = pathlib.Path('workspace')
 
@@ -14,10 +15,10 @@ ROOT = pathlib.Path('workspace')
 # Generate reference tables in batches.
 SIMULATION_ROOT = ROOT / 'simulations'
 CONFIG_BY_SPLIT = {
-    'train': (1000, 1),
-    'test': (1000, 2),
-    'small': (100, 3),
-    'medium': (500, 4),
+    'train': (1000, 1000),
+    'test': (1000, 2000),
+    'small': (100, 3000),
+    'medium': (500, 4000),
 }
 MODELS = ['ba', 'dmX']
 BATCH_SIZE = 100
@@ -26,10 +27,11 @@ SIMULATIONS = {}
 
 script = bb.File('scripts/generate_reference_table.py')
 for model in MODELS:
-    for split, (num_nodes, seed) in CONFIG_BY_SPLIT.items():
+    for split, (num_nodes, seed_prefix) in CONFIG_BY_SPLIT.items():
         key = (model, split)
         with bb.group_artifacts(SIMULATION_ROOT, model, split):
             for batch in range(NUM_BATCHES):
+                seed = seed_prefix + batch
                 args = ['$!', '$<', f'--seed={seed}', model, num_nodes, BATCH_SIZE, '$@']
                 SIMULATIONS.setdefault(key, []).extend(bb.Subprocess(f'{batch}.pkl', script, args))
 
