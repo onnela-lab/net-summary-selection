@@ -5,6 +5,7 @@ import networkx as nx
 import numpy as np
 import os
 import pickle
+import random
 import time
 from tqdm import tqdm
 from cost_based_selection import data_generation
@@ -36,6 +37,7 @@ def __main__():
 
     if args.seed is not None:
         np.random.seed(args.seed)
+        random.seed(args.seed)
 
     result = {
         'args': vars(args),
@@ -74,6 +76,8 @@ def __main__():
                     args.num_samples, args.model, 100 * (step + 1) / args.num_samples)
 
     result['end'] = time.time()
+    result['duration'] = result['end'] - result['start']
+    logger.info('computed summaries for %d samples in %.3fs', args.num_samples, result['duration'])
     directory = os.path.dirname(args.output)
     os.makedirs(directory, exist_ok=True)
     with open(args.output, 'wb') as fp:
