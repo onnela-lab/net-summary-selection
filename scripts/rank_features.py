@@ -2,8 +2,10 @@ import argparse
 from cost_based_selection import cost_based_methods, preprocessing_utils
 import functools as ft
 import logging
+import numpy as np
 import os
 import pickle
+import random
 import time
 
 
@@ -27,6 +29,7 @@ def __main__():
 
     # Parse arguments.
     parser = argparse.ArgumentParser()
+    parser.add_argument('--seed', '-s', help='random number generator seed', type=int)
     parser.add_argument('--penalty', help='penalty factor for costly features', type=float,
                         default=0)
     parser.add_argument('--mi', help='precomputed mutual information')
@@ -34,6 +37,10 @@ def __main__():
     parser.add_argument('output', help='output path for the reference table')
     parser.add_argument('filenames', help='simulation files to load', nargs='+')
     args = parser.parse_args()
+
+    if args.seed is not None:
+        np.random.seed(args.seed)
+        random.seed(args.seed)
 
     # Load and prepare data for ranking.
     data = preprocessing_utils.load_simulations(args.filenames)
