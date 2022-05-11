@@ -38,9 +38,9 @@ for model in MODELS:
 
 # Generate rankings.
 METHODS = [
-    'JMI', 'JMIM', 'mRMR', 'reliefF_distance', 'reliefF_rf_prox', 'pen_rf_importance_impurity',
-    'random_ranking', 'pen_rf_importance_permutation', 'weighted_rf_importance_impurity',
-    'weighted_rf_importance_permutation'
+    'JMI', 'JMIM', 'mRMR', 'reliefF_distance', 'reliefF_rf_prox', 'random_ranking',
+    'pen_rf_importance_impurity', 'pen_rf_importance_permutation',
+    'weighted_rf_importance_impurity', 'weighted_rf_importance_permutation',
 ]
 RANKING_SPLITS = ['train', 'small', 'medium']
 PENALTIES = [0, 0.0125, 0.025, 0.05, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2]
@@ -77,3 +77,21 @@ for model, split in it.product(MODELS, RANKING_SPLITS):
             ranking_path = bb.Group(method)
             args = ['$!', eval_script, ranking_path.name, test_data.name, '$@']
             bb.Subprocess(f'{method}_eval.pkl', rankings + SIMULATIONS[(model, "test")], args)
+
+
+# Run non-deterministc methods with different seeds to test how variable the outputs are.
+model = "dmX"
+split = "train"
+penalty = 0.5
+with bb.group_artifacts(RANKING_ROOT, model, split):
+    sims = SIMULATIONS[(model, split)]
+    mutual_info = bb.File('mutual_information.pkl')
+    for method in METHODS:
+        with bb.group_artifacts("repeats", method):
+            for seed in range(50):
+                args = ['$!', rank_script, f'--seed={seed}', f'--penalty={penalty}', method, '$@',
+                        *sims]
+                if method in ['JMI', 'JMIM', 'mRMR']:
+                    args.append(f'--mi={mutual_info}')
+                    inputs.append(mutual_info)
+                bb.Subprocess(f'seed-{seed}.pkl', list(sims), args)
