@@ -10,6 +10,6 @@ sync : requirements.txt
 	pip-sync
 
 tests :
-	pytest -v -s --cov=cost_based_selection --cov-report=html --cov-report=term --disable-warnings
+	pytest -v -s -x --cov=cost_based_selection --cov-report=html --cov-report=term --disable-warnings
 
 build : tests
