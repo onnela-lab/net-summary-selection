@@ -106,7 +106,7 @@ EXPECTED_RANKINGS = {
 }
 
 
-def is_deterministic(name):
+def is_deterministic(name: str) -> bool:
     return not any(x in name for x in ['pen_rf_importance', 'weighted_rf_importance', 'random'])
 
 
