@@ -222,7 +222,7 @@ def JMI(X, y, is_disc, cost_vec = None, cost_param = 0,
     if (cost_vec is None):
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(num_features)
-    #else:
+    # else:
     #    cost_vec=np.array(cost_vec)
 
     # Check on num_features_to_select

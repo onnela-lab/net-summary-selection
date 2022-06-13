@@ -33,6 +33,8 @@ def __main__():
     parser.add_argument('--penalty', help='penalty factor for costly features', type=float,
                         default=0)
     parser.add_argument('--mi', help='precomputed mutual information')
+    parser.add_argument('--adjusted', help='whether to adjust mutual information',
+                        action='store_true')
     parser.add_argument('method', help='method to use for ranking features', choices=METHODS)
     parser.add_argument('output', help='output path for the reference table')
     parser.add_argument('filenames', help='simulation files to load', nargs='+')
@@ -57,8 +59,9 @@ def __main__():
     if args.method in ['JMI', 'JMIM', 'mRMR']:
         with open(args.mi, 'rb') as fp:
             mutual_info = pickle.load(fp)
+        assert mutual_info['args']['adjusted'] == args.adjusted, "use MI adjustment consistently"
         method = ft.partial(method, MI_matrix=mutual_info['marginal'],
-                            MI_conditional=mutual_info['conditional'])
+                            MI_conditional=mutual_info['conditional'], adjusted=args.adjusted)
     else:
         assert not args.mi, f"cannot use mutual information with {args.method}"
 

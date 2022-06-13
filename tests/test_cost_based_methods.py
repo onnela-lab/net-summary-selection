@@ -125,6 +125,9 @@ def test_method(method_name: str, network_data_dict: dict,
         if deterministic:
             ranking2, *_ = method(**network_data_dict, cost_param=penalty)
             np.testing.assert_array_equal(ranking, ranking2)
+    # Mutual information methods have changed substantially because we adjust for chance.
+    if method_name in {'JMI'}:
+        return
     # These methods have changed ever so slightly due to different distance evaluations. But the
     # rankings remain highly correlated.
     if method_name.startswith('reliefF'):
@@ -158,3 +161,33 @@ def test_regression(method_name: str, methods: typing.Iterable[typing.Callable],
             raise KeyError(f"'{key}': {list(ranking)},")
         except AssertionError as ex:
             raise AssertionError(f"{key}\n{ex}") from ex
+
+
+@pytest.mark.parametrize('adjusted', [False, True])
+@pytest.mark.parametrize('first_discrete', [False, True])
+def test_marginal_conditional_mi_regression(adjusted: bool, first_discrete: bool):
+    n = 100
+    is_disc = np.asarray([first_discrete, False, True])
+    y = np.random.randint(3, size=n)
+    X = np.transpose([np.random.randint(3, size=n) if d else np.random.normal(0, 1, size=n) for d
+                      in is_disc])
+
+    _, marginal_old, conditional_old = cost_based_methods_old.JMI(X, y, is_disc)
+
+    marginal_new = cost_based_methods.evaluate_pairwise_mutual_information(
+        X, is_disc, adjusted=adjusted)
+    conditional_new = cost_based_methods.evaluate_conditional_mutual_information(
+        X, is_disc, y, adjusted=adjusted)
+
+    # We can only test exactly for (a) the first column because added random noise may differ or (b)
+    # if we are dealing with discrete-discrete features without adjustment. Let's build a mask.
+    # For the rest, let's just hope they're correlated.
+    mask = (is_disc[:, None] & is_disc & (not adjusted)) | (np.arange(is_disc.size) == 0)
+    np.testing.assert_allclose(marginal_old[mask], marginal_new[mask], rtol=1e-6)
+    assert set(conditional_old) == set(conditional_new)
+    for key, old in conditional_old.items():
+        np.testing.assert_allclose(old[mask], conditional_new[key][mask], rtol=1e-6)
+        corr, _ = stats.pearsonr(old[~mask], conditional_new[key][~mask])
+        assert corr > 0.5
+
+    # For the rest, let's just hope they're correlated.

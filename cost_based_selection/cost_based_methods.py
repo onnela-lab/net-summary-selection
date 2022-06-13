@@ -21,7 +21,10 @@ import numpy as np
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import adjusted_mutual_info_score
 from scipy import spatial
+from tqdm import tqdm
+import itertools as it
 from .old.cost_based_methods import _private_proximity_matrix
 from ._util import evaluate_proximity_matrix
 
@@ -53,28 +56,57 @@ def random_ranking(X, y, is_disc, cost_vec=None, cost_param=0):
     return ranking,
 
 
-def evaluate_pairwise_mutual_information(X: np.ndarray, is_disc: np.ndarray,
-                                         random_seed: int = 123) -> np.ndarray:
+def evaluate_mi(x: np.ndarray, y: np.ndarray, x_discrete: bool, y_discrete: bool,
+                adjusted: bool = False, n_neighbors: int = 3, random_state: int = 123):
+    """
+    Evaluate mutual information, possibly adjusting for chance agreement.
+    """
+    # Give up if either of the variables are discrete and have only one unique value or all unique
+    # values.
+    for z, disc in [(x, x_discrete), (y, y_discrete)]:
+        if not disc:
+            continue
+        nunique = np.unique(z).size
+        if nunique == 1 or nunique == z.size:
+            return 0
+    # Use the same method as sklearn.feature_selection.mutual_info_* if not adjusted.
+    # if not adjusted:
+    #     return _mutual_info._compute_mi(x, y, x_discrete, y_discrete, n_neighbors=n_neighbors)
+    if not adjusted:
+        if y_discrete:
+            return mutual_info_classif(x[:, None], y, discrete_features=[x_discrete],
+                                       random_state=random_state).squeeze()
+        else:
+            return mutual_info_regression(x[:, None], y, discrete_features=[x_discrete],
+                                          random_state=random_state).squeeze()
+    # Evaluate adjusted mutual info if desired and both features are discrete.
+    if not (x_discrete and y_discrete):
+        raise ValueError("can only adjust mutual information for discrete variables")
+    return adjusted_mutual_info_score(x, y)
+
+
+def evaluate_pairwise_mutual_information(
+        X: np.ndarray, is_disc: np.ndarray, random_seed: int = 123, adjusted=True,
+        progress: bool = False) -> np.ndarray:
     """
     Compute all pairwise mutual information scores.
     """
     _, num_features = X.shape
     matrix_MI = np.zeros((num_features, num_features), dtype=float)
 
-    for ii in range(num_features):
-        if is_disc[ii]:  # If the ii-th feature is discrete
-            # we use the classif version
-            matrix_MI[ii, :] = mutual_info_classif(X, X[:, ii], discrete_features=is_disc,
-                                                   random_state=random_seed)
-        else:
-            # otherwise we use the continuous (regression) version
-            matrix_MI[ii, :] = mutual_info_regression(X, X[:, ii], discrete_features=is_disc,
-                                                      random_state=random_seed)
+    pairs = it.combinations_with_replacement(range(num_features), 2)
+    npairs = num_features * (num_features + 1) // 2
+    for i, j in tqdm(pairs, desc="pairwise", total=npairs) if progress else pairs:
+        adjusted_ = adjusted and is_disc[i] and is_disc[j]
+        score = evaluate_mi(X[:, i], X[:, j], is_disc[i], is_disc[j], adjusted_,
+                            random_state=random_seed)
+        matrix_MI[i, j] = matrix_MI[j, i] = score
     return matrix_MI
 
 
-def evaluate_conditional_mutual_information(X: np.ndarray, is_disc: np.ndarray, y: np.ndarray,
-                                            random_seed: int = 123) -> np.ndarray:
+def evaluate_conditional_mutual_information(
+        X: np.ndarray, is_disc: np.ndarray, y: np.ndarray, random_seed: int = 123, adjusted=True,
+        progress: bool = False) -> np.ndarray:
     """
     Compute pairwise mutual information conditional on the class of `y`.
     """
@@ -93,28 +125,20 @@ def evaluate_conditional_mutual_information(X: np.ndarray, is_disc: np.ndarray, 
         # proportion of this modality
         proValY = np.mean(y == valY)
 
-        is_discForSubX = copy.deepcopy(is_disc)
-        for featIdx in range(num_features):
-            if is_disc[featIdx] and len(np.unique(subX[:, featIdx])) == subX.shape[0]:
-                is_discForSubX[featIdx] = False
-
-        # Fill the matrix
-        for ii in range(num_features):
-            if is_discForSubX[ii]:
-                matTmp[ii, :] = proValY * mutual_info_classif(
-                    subX, subX[:, ii], discrete_features=is_discForSubX,
-                    random_state=random_seed)
-            else:
-                matTmp[ii, :] = proValY * mutual_info_regression(
-                    subX, subX[:, ii], discrete_features=is_discForSubX,
-                    random_state=random_seed)
+        pairs = it.combinations_with_replacement(range(num_features), 2)
+        npairs = num_features * (num_features + 1) // 2
+        for i, j in tqdm(pairs, desc=f"conditional: {valY}", total=npairs) if progress else pairs:
+            adjusted_ = adjusted and is_disc[i] and is_disc[j]
+            score = evaluate_mi(subX[:, i], subX[:, j], is_disc[i], is_disc[j], adjusted_,
+                                random_state=random_seed)
+            matTmp[i, j] = matTmp[j, i] = proValY * score
 
         MI_condY[valY] = matTmp
     return MI_condY
 
 
 def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
-         MI_matrix=None, MI_conditional=None):
+         MI_matrix=None, MI_conditional=None, adjusted: bool = False):
     """
     Cost-based feature ranking with maximum relevance minimum redundancy.
 
@@ -175,17 +199,15 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
     # unRanked contains the feature indices unranked
     unRanked = list(range(num_features))
 
-    # If a feature is discrete but with always different values, then
-    # convert it into a continuous one
-    # (to handle errors with the MI computation function)
-    for featIdx in range(num_features):
-        if is_disc[featIdx] and len(np.unique(X[:, featIdx])) == X.shape[0]:
-            is_disc[featIdx] = False
-
     # Computing all the MIs I(X_j; y)
-    initial_scores = mutual_info_classif(X, y, discrete_features=is_disc, random_state=random_seed)
+    # initial_scores = mutual_info_classif(X, y, discrete_features=is_disc,
+    #                                      random_state=random_seed)
+    initial_scores = np.asarray([
+        evaluate_mi(x, y, x_discrete, True, adjusted and x_discrete, random_state=random_seed) for
+        x, x_discrete in zip(X.T, is_disc)
+    ])
     # The cost based will substract lambda*cost for each item of initial_scores
-    initial_scores_mcost = initial_scores - cost_param*cost_vec
+    initial_scores_mcost = initial_scores - cost_param * cost_vec
 
     if MI_matrix is None:
         matrix_MI = evaluate_pairwise_mutual_information(X, is_disc, random_seed)
@@ -216,7 +238,7 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
 
 
 def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
-        MI_matrix=None, MI_conditional=None):
+        MI_matrix=None, MI_conditional=None, adjusted: bool = False):
     """
     Cost-based feature ranking based on Joint Mutual Information.
 
@@ -288,15 +310,13 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
     # unRanked contains the feature indices unranked
     unRanked = list(range(num_features))
 
-    # If a feature is discrete but with always different values, then
-    # convert it into a continuous one
-    # (to handle errors with the MI computation function)
-    for featIdx in range(num_features):
-        if is_disc[featIdx] and len(np.unique(X[:, featIdx])) == X.shape[0]:
-            is_disc[featIdx] = False
-
     # Computing all the MIs I(X_j; y)
-    initial_scores = mutual_info_classif(X, y, discrete_features=is_disc, random_state=random_seed)
+    # initial_scores = mutual_info_classif(X, y, discrete_features=is_disc,
+    #                                      random_state=random_seed)
+    initial_scores = np.asarray([
+        evaluate_mi(x, y, x_discrete, True, adjusted and x_discrete, random_state=random_seed) for
+        x, x_discrete in zip(X.T, is_disc)
+    ])
 
     # The cost based will substract lambda*cost for each item of initial_scores
     initial_scores_mcost = initial_scores - cost_param * cost_vec
@@ -348,7 +368,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
 
 
 def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None, random_seed=123,
-         MI_matrix=None, MI_conditional=None):
+         MI_matrix=None, MI_conditional=None, adjusted: bool = False):
     """ Cost-based feature ranking based on Joint Mutual Information Maximization.
 
     Cost-based adaptation of the filter feature selection algorithm based on
@@ -423,7 +443,13 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
         if is_disc[featIdx] and len(np.unique(X[:, featIdx])) == X.shape[0]:
             is_disc[featIdx] = False
 
-    initial_scores = mutual_info_classif(X, y, discrete_features=is_disc, random_state=random_seed)
+    # Computing all the MIs I(X_j; y)
+    # initial_scores = mutual_info_classif(X, y, discrete_features=is_disc,
+    #                                      random_state=random_seed)
+    initial_scores = np.asarray([
+        evaluate_mi(x, y, x_discrete, True, adjusted and x_discrete, random_state=random_seed) for
+        x, x_discrete in zip(X.T, is_disc)
+    ])
     initial_scores_mcost = initial_scores - cost_param*cost_vec
 
     if MI_matrix is None:

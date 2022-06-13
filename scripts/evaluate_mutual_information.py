@@ -14,6 +14,8 @@ def __main__():
     parser = argparse.ArgumentParser()
     parser.add_argument('output', help='output path for the reference table')
     parser.add_argument('filenames', help='simulation files to load', nargs='+')
+    parser.add_argument('--adjusted', help='adjust mutual information for chance',
+                        action='store_true')
     args = parser.parse_args()
 
     # Load and prepare data for ranking.
@@ -23,10 +25,10 @@ def __main__():
     result = {
         'args': vars(args),
         'marginal': cost_based_methods.evaluate_pairwise_mutual_information(
-            data['X'], data['is_discrete']
+            data['X'], data['is_discrete'], args.adjusted, progress=True,
         ),
         'conditional': cost_based_methods.evaluate_conditional_mutual_information(
-            data['X'], data['is_discrete'], data['y'],
+            data['X'], data['is_discrete'], data['y'], args.adjusted, progress=True,
         )
     }
     with open(args.output, 'wb') as fp:
