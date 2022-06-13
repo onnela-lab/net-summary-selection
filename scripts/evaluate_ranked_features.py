@@ -1,5 +1,6 @@
 import argparse
 from cost_based_selection import preprocessing_utils
+import functools as ft
 import glob
 import numpy as np
 import os
@@ -8,6 +9,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
 
 
 def load_rankings(directory):
@@ -57,6 +59,7 @@ def load_rankings(directory):
 def evaluate_test_statistics(data, rankings, max_features, model_cls, folds):
     num_feature_range = np.arange(max_features) + 1
     accuracies = []
+    neg_log_loss = []
     costs = []
 
     for ranking in rankings:
@@ -65,14 +68,18 @@ def evaluate_test_statistics(data, rankings, max_features, model_cls, folds):
             # Evaluate the cross-validated scores.
             pipeline = make_pipeline(StandardScaler(), model_cls())
             ranked_X = data['X'][:, ranking][:, :num_features]
-            scores = cross_val_score(pipeline, ranked_X, data['y'], cv=folds)
+            scores = cross_val_score(pipeline, ranked_X, data['y'], cv=folds, scoring="accuracy")
             accuracy_row.append(scores)
+            scores = cross_val_score(pipeline, ranked_X, data['y'], cv=folds,
+                                     scoring="neg_log_loss")
+            neg_log_loss.append(scores)
         accuracies.append(accuracy_row)
         costs.append(data['costs'][ranking[:max_features]])
 
     cumulative_costs = np.cumsum(costs, axis=1)
     return {
         'accuracies': np.asarray(accuracies),
+        'neg_log_loss': np.asarray(neg_log_loss),
         'cumulative_costs': cumulative_costs,
         'normalized_cumulative_costs': cumulative_costs / data['costs'].sum()
     }
@@ -88,7 +95,9 @@ def __main__(args: list[str] = None) -> int:
     args = parser.parse_args(args)
 
     if args.model == 'SVC':
-        model_cls = SVC
+        model_cls = ft.partial(SVC, probability=True)
+    elif args.model == 'KNN':
+        model_cls = KNeighborsClassifier
     else:
         raise NotImplementedError(args.model)
 

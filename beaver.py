@@ -4,7 +4,7 @@ import pathlib
 
 # Limit within-process concurrency because it breaks multiprocessing by setting global environment
 # variables for all subprocess and shell commands.
-bb.Subprocess.ENV.update({
+bb.Subprocess.set_global_env({
     'NUMEXPR_NUM_THREADS': 1,
     'OPENBLAS_NUM_THREADS': 1,
     'OMP_NUM_THREADS': 1,
@@ -75,7 +75,7 @@ for model, split in it.product(MODELS, RANKING_SPLITS):
 
             # Run the evaluation.
             ranking_path = bb.Group(method)
-            args = ['$!', eval_script, ranking_path.name, test_data.name, '$@']
+            args = ['$!', eval_script, "--model=KNN", ranking_path.name, test_data.name, '$@']
             bb.Subprocess(f'{method}_eval.pkl', rankings + SIMULATIONS[(model, "test")], args)
 
 
