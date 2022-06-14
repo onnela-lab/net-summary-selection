@@ -43,7 +43,10 @@ METHODS = [
     'weighted_rf_importance_impurity', 'weighted_rf_importance_permutation',
 ]
 RANKING_SPLITS = ['train', 'small', 'medium']
-PENALTIES = [0, 0.0125, 0.025, 0.05, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 8, 9, 10, 11, 12, 12.8, 25.6, 51.2]
+PENALTIES = [
+    0, 0.0125, 0.025, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.1, 1.6, 2.3, 3.2, 4.5, 6.4, 8, 9, 10, 11, 12,
+    12.8, 25.6, 51.2,
+]
 RANKING_ROOT = ROOT / 'rankings'
 
 # Iterate over all combinations of models and splits for which to rank features.
