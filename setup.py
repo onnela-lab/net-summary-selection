@@ -27,7 +27,7 @@ setuptools.setup(
             'cython',
             'joblib>=0.17.0',
             'matplotlib>=3.3.2',
-            'networkit',
+            'networkit>=10',
             'networkx>=2.5',
             'numpy>=1.19.2',
             'pandas>=1.1.3',

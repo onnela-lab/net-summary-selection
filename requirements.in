@@ -2,4 +2,3 @@
 jupyter
 line_profiler
 snakeviz
-git+https://github.com/networkit/networkit.git@a122920
