@@ -58,30 +58,30 @@ def load_rankings(directory):
 
 def evaluate_test_statistics(data, rankings, max_features, model_cls, folds):
     num_feature_range = np.arange(max_features) + 1
-    accuracies = []
-    neg_log_loss = []
+    scorers = ["neg_log_loss", "accuracy"]
+    statistics = {}
     costs = []
 
     for ranking in rankings:
-        accuracy_row = []
+        rows = {}
         for num_features in num_feature_range:
             # Evaluate the cross-validated scores.
             pipeline = make_pipeline(StandardScaler(), model_cls())
             ranked_X = data['X'][:, ranking][:, :num_features]
-            scores = cross_val_score(pipeline, ranked_X, data['y'], cv=folds, scoring="accuracy")
-            accuracy_row.append(scores)
-            scores = cross_val_score(pipeline, ranked_X, data['y'], cv=folds,
-                                     scoring="neg_log_loss")
-            neg_log_loss.append(scores)
-        accuracies.append(accuracy_row)
+
+            for scorer in scorers:
+                scores = cross_val_score(pipeline, ranked_X, data['y'], cv=folds, scoring=scorer)
+                rows.setdefault(scorer, []).append(scores)
+        for key, row in rows.items():
+            statistics.setdefault(key, []).append(row)
         costs.append(data['costs'][ranking[:max_features]])
 
     cumulative_costs = np.cumsum(costs, axis=1)
+    statistics = {key: np.asarray(value) for key, value in statistics.items()}
     return {
-        'accuracies': np.asarray(accuracies),
-        'neg_log_loss': np.asarray(neg_log_loss),
         'cumulative_costs': cumulative_costs,
-        'normalized_cumulative_costs': cumulative_costs / data['costs'].sum()
+        'normalized_cumulative_costs': cumulative_costs / data['costs'].sum(),
+        **statistics,
     }
 
 
