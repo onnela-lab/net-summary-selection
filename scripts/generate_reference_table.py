@@ -49,7 +49,8 @@ def __main__():
         steps = tqdm(steps)
     for step in steps:
         # Generate a graph.
-        with log_time(logger, 'generated %(model)s graph in %(time).3fs', model=args.model):
+        with log_time(logger, 'generated %(model)s graph with %(num_nodes)d nodes in %(time).3fs',
+                      model=args.model, num_nodes=args.num_nodes):
             if args.model == 'ba':
                 model_label = 1 + np.random.randint(4)
                 graph = nx.barabasi_albert_graph(args.num_nodes, model_label)
