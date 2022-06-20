@@ -2,6 +2,7 @@ import argparse
 from cost_based_selection import preprocessing_utils
 from cost_based_selection import cost_based_methods
 import logging
+import os
 import pickle
 
 
@@ -31,6 +32,8 @@ def __main__():
             data['X'], data['is_discrete'], data['y'], args.adjusted, progress=True,
         )
     }
+    directory = os.path.dirname(args.output)
+    os.makedirs(directory, exist_ok=True)
     with open(args.output, 'wb') as fp:
         pickle.dump(result, fp)
     logger.info('saved results to %s', args.output)

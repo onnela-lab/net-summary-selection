@@ -108,6 +108,8 @@ def __main__(args: list[str] = None) -> int:
     result = rankings | evaluate_test_statistics(data, rankings['rankings'], 15, model_cls,
                                                  args.folds)
     # Save the results.
+    directory = os.path.dirname(args.output)
+    os.makedirs(directory, exist_ok=True)
     with open(args.output, 'wb') as fp:
         pickle.dump(result, fp)
 
