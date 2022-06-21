@@ -164,9 +164,6 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
             (1, X.shape[1]). If None, the cost is set to zero for each feature.
         cost_param (float):
             the positive cost penalization parameter. 0 by default.
-        num_features_to_select (int):
-            the number of best features to select. If unspecified, does not
-            select a subset of features but keep all of them.
         random_seed (int):
             the random seed to use with the mutual_information function
             (when computing the Mutual Information (MI) involving one or more
@@ -190,11 +187,7 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(num_features)
 
-    # Check on num_features_to_select
-    if (num_features_to_select is not None):
-        num_selected_features = min(num_features, num_features_to_select)
-    else:
-        num_selected_features = num_features
+    assert num_features_to_select is None  # We'll just return the ranking without discarding info.
 
     # unRanked contains the feature indices unranked
     unRanked = list(range(num_features))
@@ -223,8 +216,7 @@ def mRMR(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
     unRanked.pop(selected)
 
     # Until we have the desired number of selected_features, we apply the selection criterion
-    for k in range(1, num_selected_features):
-
+    for _ in range(1, num_features):
         featureRel = []
         # Compute the criterion to maximize for each unranked covariate
         for idx in unRanked:
@@ -263,9 +255,6 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
             (1, X.shape[1]). If None, the cost is set to zero for each feature.
         cost_param (float):
             the positive cost penalization parameter. 0 by default.
-        num_features_to_select (int):
-            the number of best features to select. If unspecified, does not
-            select a subset of features but keep all of them.
         random_seed (int):
             the random seed to use with the mutual_information function
             (when computing the Mutual Information (MI) involving one or more
@@ -301,11 +290,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(num_features)
 
-    # Check on num_features_to_select
-    if num_features_to_select is not None:
-        num_selected_features = min(num_features, num_features_to_select)
-    else:
-        num_selected_features = num_features
+    assert num_features_to_select is None  # We'll just return the ranking without discarding info.
 
     # unRanked contains the feature indices unranked
     unRanked = list(range(num_features))
@@ -345,7 +330,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
     unRanked.pop(selected)
 
     # Until we have the desired number of selected_features, we apply the selection criterion
-    for k in range(1, num_selected_features):
+    for _ in range(1, num_features):
 
         featureRel = []
         # Compute the criterion to maximize for each unranked covariate
@@ -392,9 +377,6 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
             (1, X.shape[1]). If None, the cost is set to zero for each feature.
         cost_param (float):
             the positive cost penalization parameter. 0 by default.
-        num_features_to_select (int):
-            the number of best features to select. If unspecified, does not
-            select a subset of features but keep all of them.
         random_seed (int):
             the random seed to use with the mutual_information function
             (when computing the Mutual Information (MI) involving one or more
@@ -430,11 +412,7 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(num_features)
 
-    # Check on num_features_to_select
-    if (num_features_to_select is not None):
-        num_selected_features = min(num_features, num_features_to_select)
-    else:
-        num_selected_features = num_features
+    assert num_features_to_select is None  # We'll just return the ranking without discarding info.
 
     # unRanked contains the feature indices unranked
     unRanked = list(range(num_features))
@@ -476,7 +454,7 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
     unRanked.pop(selected)
 
     # Until we have the desired number of selected_features, we apply the selection criterion
-    for k in range(1, num_selected_features):
+    for k in range(1, num_features):
 
         featureRel = []
         # Compute the criterion to maximize for each unranked covariate
@@ -500,7 +478,7 @@ def JMIM(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None
 
 def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to_select=None,
             proximity="distance", min_samples_leaf=100, n_estimators=500, sim_matrix=None,
-            is_disc=None, debug=False):
+            is_disc=None, debug=False, norm: str = "range"):
     """ Cost-based feature ranking adaptation of the ReliefF algorithm.
 
     Cost-based adaptation of the ReliefF algorithm, where the nearest neighbors
@@ -524,9 +502,6 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             the positive cost penalization parameter. 0 by default.
         num_neighbors (int):
             the number of nearest neighbors. 10 by default.
-        num_features_to_select (int):
-            the number of best features to select. If unspecified, does not
-            select a subset of features but keep all of them.
         proximity (str):
             a string that is either "distance" to use the classic version of
             reliefF, or "rf prox" to use the random forest proximity between
@@ -542,6 +517,8 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             either distance or random forest proximity. This argument is
             returned to speed up the analysis when working with multiple
             cost_param values.
+        norm: Whether to normalize by `range` or `standardize` the features before further
+            processing.
 
     Returns:
         ranking (list):
@@ -567,11 +544,7 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(nCov)
 
-    # Check on num_features_to_select
-    if (num_features_to_select is not None):
-        num_features_to_select = min(nCov, num_features_to_select)
-    else:
-        num_features_to_select = nCov
+    assert num_features_to_select is None  # We'll just return the ranking without discarding info.
 
     # Data standardization
     X_std = copy.deepcopy(X)
@@ -589,9 +562,14 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
         pClasses[cLab] = pClasses[cLab]/nbrData
 
     # Compute for each covariate the max and min values. Useful for L1 dist.
-    maxXVal = np.max(X_std, axis=0)
-    minXVal = np.min(X_std, axis=0)
-    X_norm = X_std / (maxXVal - minXVal)
+    if norm == "range":
+        maxXVal = np.max(X_std, axis=0)
+        minXVal = np.min(X_std, axis=0)
+        X_norm = X_std / (maxXVal - minXVal)
+    elif norm == "standardize":
+        X_norm = X_std
+    else:
+        raise ValueError(norm)
 
     # If we use the classic (Manhattan) distance:
     if proximity == "distance":
@@ -611,9 +589,9 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             if debug:
                 proxMatRF_old = _private_proximity_matrix(model, X_std, normalize=True)
                 np.testing.assert_allclose(proxMatRF, proxMatRF_old)
-            proxMat = proxMatRF
+            distMat = -proxMatRF
         else:
-            proxMat = sim_matrix
+            distMat = -sim_matrix
 
     # For each training data R_i:
     # Search for k nearest hits
@@ -632,21 +610,12 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
     m = nTrain  # Here we compute the score using all the training data
     for i in range(m):
         # For the same class that R_i, keep the indices achieving the k lower distances
-        if proximity == "distance":
-            argSorted = np.argsort(distMat[i, y == y[i]])  # We withdraw the i-th element
-            kNearHits = argSorted[argSorted != i][0:num_neighbors]
-            classDifRi = classes[classes != y[i]]
-            for c in range(len(classDifRi)):
-                tmp = classDifRi[c]
-                kNearMisses[c, :] = np.argsort(distMat[i, y == tmp])[0:num_neighbors]
-
-        if proximity == "rf prox":
-            argSorted = np.argsort(-proxMat[i, y == y[i]])  # We withdraw the i-th element
-            kNearHits = argSorted[argSorted != i][0:num_neighbors]
-            classDifRi = classes[classes != y[i]]
-            for c in range(len(classDifRi)):
-                tmp = classDifRi[c]
-                kNearMisses[c, :] = np.argsort(-proxMat[i, y == tmp])[0:num_neighbors]
+        argSorted = np.argsort(distMat[i, y == y[i]])  # We withdraw the i-th element
+        kNearHits = argSorted[argSorted != i][0:num_neighbors]
+        classDifRi = classes[classes != y[i]]
+        for c in range(len(classDifRi)):
+            tmp = classDifRi[c]
+            kNearMisses[c, :] = np.argsort(distMat[i, y == tmp])[0:num_neighbors]
 
         # Compute the elements diff(A, R_i, H_j) for j in 1:k, per feature A
         for cov in range(nCov):
@@ -682,13 +651,10 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             weightsDic[cov] -= cost_param*cost_vec[cov]/(m)
 
     # Return the number of feature requested, in decreasing order, plus weights
-    ranking = np.argsort(-np.array(list(weightsDic.values())))[:num_features_to_select]
+    ranking = np.argsort(-np.array(list(weightsDic.values())))
     ranking = ranking.tolist()
 
-    if proximity == "distance":
-        return ranking, weightsDic, distMat
-    elif proximity == "rf prox":
-        return ranking, weightsDic, proxMat
+    return ranking, weightsDic, distMat
 
 
 def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=None,
@@ -710,9 +676,6 @@ def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=
             (1, X.shape[1]). If None, the cost is set to zero for each feature.
         cost_param (float):
             the positive cost penalization parameter. 0 by default.
-        num_features_to_select (int):
-            the number of best features to select. If unspecified, does not
-            select a subset of features but keep all of them.
         imp_type (str):
             a string, either "impurity" or "permutation", to use the
             random forest importance based on the decrease of the impurity
@@ -752,11 +715,7 @@ def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(nCov)
 
-    # Check on num_features_to_select
-    if (num_features_to_select is not None):
-        num_features_to_select = min(nCov, num_features_to_select)
-    else:
-        num_features_to_select = nCov
+    assert num_features_to_select is None  # We'll just return the ranking without discarding info.
 
     if(rf_importance_vec is None):
         # For format compatibility between python and R (rpy2)
@@ -805,7 +764,7 @@ def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=
     for cov in range(nCov):
         rf_importance_copy[cov] -= cost_param * cost_vec[cov]
 
-    ranking = np.argsort(-rf_importance_copy)[:num_features_to_select]
+    ranking = np.argsort(-rf_importance_copy)
     ranking = ranking.tolist()
 
     return ranking, unpenalized_rf_importance
@@ -832,9 +791,6 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
             (1, X.shape[1]). If None, the cost is set to zero for each feature.
         cost_param (float):
             the positive cost penalization parameter. 0 by default.
-        num_features_to_select (int):
-            the number of best features to select. If unspecified, does not
-            select a subset of features but keep all of them.
         imp_type (str):
             a string, either "impurity" or "permutation", to use the
             random forest importance based on the decrease of the impurity
@@ -866,11 +822,7 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
         # If no cost is specified, then all costs are set as equal to zero
         cost_vec = np.zeros(nCov)
 
-    # Check on num_features_to_select
-    if (num_features_to_select is not None):
-        num_features_to_select = min(nCov, num_features_to_select)
-    else:
-        num_features_to_select = nCov
+    assert num_features_to_select is None  # We'll just return the ranking without discarding info.
 
     # Compute the rf weights for sampling the covariates
     # Note, a base importance of 0.01 is added to all features to avoid num. errors
@@ -909,7 +861,7 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
 
     numpy2ri.deactivate()
 
-    ranking = np.argsort(-weighted_rf_importance)[:num_features_to_select]
+    ranking = np.argsort(-weighted_rf_importance)
     ranking = ranking.tolist()
 
     return (ranking,)

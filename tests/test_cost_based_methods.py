@@ -25,7 +25,7 @@ def network_data_dict():
 
     # Train test split for validation.
     X = np.array(summaries)
-    y = model_indices.modIndex.tolist()
+    y = np.asarray(model_indices.modIndex.tolist())
     is_discrete = is_discrete.iloc[0, :].tolist()
     return {
         'X': X,
