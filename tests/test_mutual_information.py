@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import sklearn
 import sklearn.metrics
 import sklearn.feature_selection
@@ -22,12 +23,19 @@ def test_mutual_info_unadjusted():
     np.testing.assert_array_less(sklearn.metrics.adjusted_mutual_info_score(x, y), score)
 
 
+@pytest.mark.xfail(reason="https://github.com/scikit-learn/scikit-learn/issues/23720")
 def test_classif_regression_symmetry():
+    np.random.seed(0)
     n = 100
-    x = np.random.randint(10, size=n)
-    y = np.random.normal(0, 1, size=n)
+    d = np.random.randint(10, size=n)
+    c = np.random.normal(0, 1, size=n)
 
-    score1 = sklearn.feature_selection.mutual_info_classif(y[:, None], x, discrete_features=[False])
-    score2 = sklearn.feature_selection.mutual_info_regression(x[:, None], y,
-                                                              discrete_features=[True])
+    # Use continuous feature to classify discrete target.
+    score1 = sklearn.feature_selection.mutual_info_classif(
+        c[:, None], d, discrete_features=[False], random_state=123)
+
+    # Use discrete feature to regress continuous target.
+    score2 = sklearn.feature_selection.mutual_info_regression(
+        d[:, None], c, discrete_features=[True], random_state=123)
+
     np.testing.assert_allclose(score1, score2)
