@@ -93,7 +93,7 @@ def synthetic_data_dict():
 
 
 EXPECTED_RANKINGS = {
-    'JMI-0.0': [4, 3, 2, 1, 0],
+    'JMI-0.0': [4, 3, 1, 2, 0],
     'JMI-0.001': [4, 3, 1, 2, 0],
     'JMIM-0.0': [4, 3, 2, 0, 1],
     'JMIM-0.001': [4, 3, 2, 0, 1],
@@ -126,7 +126,7 @@ def test_method(method_name: str, network_data_dict: dict,
             ranking2, *_ = method(**network_data_dict, cost_param=penalty)
             np.testing.assert_array_equal(ranking, ranking2)
     # Mutual information methods have changed substantially because we adjust for chance.
-    if method_name in {'JMI'}:
+    if method_name in {'JMI', 'JMIM', 'mRMR'}:
         return
     # These methods have changed ever so slightly due to different distance evaluations. But the
     # rankings remain highly correlated.
@@ -143,7 +143,7 @@ def test_regression(method_name: str, methods: typing.Iterable[typing.Callable],
                     penalty: float, synthetic_data_dict: dict):
     assert synthetic_data_dict['is_disc'].sum() > 0
 
-    for method in methods:
+    for version, method in zip(["new", "old"], methods):
         if method is None:
             continue
         ranking, *_ = method(**synthetic_data_dict, cost_param=penalty)
@@ -155,17 +155,22 @@ def test_regression(method_name: str, methods: typing.Iterable[typing.Callable],
             assert key not in EXPECTED_RANKINGS, message
             pytest.skip(message)
 
-        try:
-            np.testing.assert_array_equal(ranking, EXPECTED_RANKINGS[key])
-        except KeyError:
+        # MI methods have changed substantially so there may be differences between old and new.
+        if method_name in {"JMI", "JMIM", "mRMR"}:
+            return
+
+        if (expected := EXPECTED_RANKINGS.get(key)) is None:
             raise KeyError(f"'{key}': {list(ranking)},")
-        except AssertionError as ex:
-            raise AssertionError(f"{key}\n{ex}") from ex
+        elif not np.array_equal(ranking, expected):
+            raise ValueError(f"got ranking {ranking} but expected {expected} for method {version}")
 
 
-@pytest.mark.parametrize('adjusted', [False, True])
-@pytest.mark.parametrize('first_discrete', [False, True])
-def test_marginal_conditional_mi_regression(adjusted: bool, first_discrete: bool):
+@pytest.mark.parametrize('adjusted', [False, True], ids=["unadjusted", "adjusted"])
+@pytest.mark.parametrize('first_discrete', [False, True],
+                         ids=["first_continuous", "first_discrete"])
+@pytest.mark.parametrize('marginal', [True, False], ids=["marginal", "conditional"])
+def test_marginal_conditional_mi_regression(adjusted: bool, first_discrete: bool, marginal: bool):
+    np.random.seed(3)
     n = 100
     is_disc = np.asarray([first_discrete, False, True])
     y = np.random.randint(3, size=n)
@@ -174,20 +179,27 @@ def test_marginal_conditional_mi_regression(adjusted: bool, first_discrete: bool
 
     _, marginal_old, conditional_old = cost_based_methods_old.JMI(X, y, is_disc)
 
-    marginal_new = cost_based_methods.evaluate_pairwise_mutual_information(
-        X, is_disc, adjusted=adjusted)
-    conditional_new = cost_based_methods.evaluate_conditional_mutual_information(
-        X, is_disc, y, adjusted=adjusted)
+    # We can only test exactly if we are dealing with discrete-discrete features without adjustment.
+    # Let's build a mask. For the rest, let's just hope they're correlated.
+    offdiag = ~np.eye(is_disc.size).astype(bool)
+    mask = is_disc[:, None] & is_disc & (not adjusted)
 
-    # We can only test exactly for (a) the first column because added random noise may differ or (b)
-    # if we are dealing with discrete-discrete features without adjustment. Let's build a mask.
-    # For the rest, let's just hope they're correlated.
-    mask = (is_disc[:, None] & is_disc & (not adjusted)) | (np.arange(is_disc.size) == 0)
-    np.testing.assert_allclose(marginal_old[mask], marginal_new[mask], rtol=1e-6)
-    assert set(conditional_old) == set(conditional_new)
-    for key, old in conditional_old.items():
-        np.testing.assert_allclose(old[mask], conditional_new[key][mask], rtol=1e-6)
-        corr, _ = stats.pearsonr(old[~mask], conditional_new[key][~mask])
-        assert corr > 0.5
+    items = []
 
-    # For the rest, let's just hope they're correlated.
+    if marginal:
+        marginal_new = cost_based_methods.evaluate_pairwise_mutual_information(
+            X, is_disc, adjusted=adjusted)
+        items.append(("marginal", marginal_new, marginal_old))
+    else:
+        conditional_new = cost_based_methods.evaluate_conditional_mutual_information(
+            X, is_disc, y, adjusted=adjusted)
+        assert set(conditional_old) == set(conditional_new)
+        items.extend((key, value, conditional_old[key]) for key, value in conditional_new.items())
+
+    for key, new, old in items:
+        np.testing.assert_allclose(old[mask & offdiag], new[mask & offdiag], rtol=1e-6)
+        a = old[~mask & offdiag]
+        b = new[~mask & offdiag]
+        if not np.allclose(a, b):
+            corr, _ = stats.pearsonr(a, b)
+            assert corr > 0.5, f"MI not correlated for {key}"

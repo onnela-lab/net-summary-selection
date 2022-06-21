@@ -61,6 +61,8 @@ def evaluate_mi(x: np.ndarray, y: np.ndarray, x_discrete: bool, y_discrete: bool
     """
     Evaluate mutual information, possibly adjusting for chance agreement.
     """
+    x = np.asarray(x)
+    y = np.asarray(y)
     # Give up if either of the variables are discrete and have only one unique value or all unique
     # values.
     for z, disc in [(x, x_discrete), (y, y_discrete)]:
@@ -92,10 +94,10 @@ def evaluate_pairwise_mutual_information(
     Compute all pairwise mutual information scores.
     """
     _, num_features = X.shape
-    matrix_MI = np.zeros((num_features, num_features), dtype=float)
+    matrix_MI = np.nan * np.empty((num_features, num_features), dtype=float)
 
-    pairs = it.combinations_with_replacement(range(num_features), 2)
-    npairs = num_features * (num_features + 1) // 2
+    pairs = it.combinations(range(num_features), 2)
+    npairs = num_features * (num_features - 1) // 2
     for i, j in tqdm(pairs, desc="pairwise", total=npairs) if progress else pairs:
         adjusted_ = adjusted and is_disc[i] and is_disc[j]
         score = evaluate_mi(X[:, i], X[:, j], is_disc[i], is_disc[j], adjusted_,
@@ -118,18 +120,18 @@ def evaluate_conditional_mutual_information(
     for valY in np.unique(y):
 
         # Initialize a new matrix
-        matTmp = np.zeros((num_features, num_features), dtype=float)
+        matTmp = np.nan * np.empty((num_features, num_features), dtype=float)
         # Extract the rows of X with this modality of Y
         subX = X[y == valY]
 
         # proportion of this modality
         proValY = np.mean(y == valY)
 
-        pairs = it.combinations_with_replacement(range(num_features), 2)
-        npairs = num_features * (num_features + 1) // 2
+        pairs = it.combinations(range(num_features), 2)
+        npairs = num_features * (num_features - 1) // 2
         for i, j in tqdm(pairs, desc=f"conditional: {valY}", total=npairs) if progress else pairs:
             adjusted_ = adjusted and is_disc[i] and is_disc[j]
-            score = evaluate_mi(subX[:, i], subX[:, j], is_disc[i], is_disc[j], adjusted_,
+            score = evaluate_mi(subX[:, i], subX[:, j], is_disc[i], is_disc[j], adjusted=adjusted_,
                                 random_state=random_seed)
             matTmp[i, j] = matTmp[j, i] = proValY * score
 
@@ -239,7 +241,7 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
 
     H. H. Yang and J. Moody. Feature selection based on joint mutual information.
     In Advances in intelligent data analysis, proceedings of international
-    ICSC symposium, pages 22—-25, 1999.
+    ICSC symposium, pages 22--25, 1999.
 
     Args:
         X (numpy.ndarray):
@@ -296,18 +298,17 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
     unRanked = list(range(num_features))
 
     # Computing all the MIs I(X_j; y)
-    # initial_scores = mutual_info_classif(X, y, discrete_features=is_disc,
-    #                                      random_state=random_seed)
     initial_scores = np.asarray([
-        evaluate_mi(x, y, x_discrete, True, adjusted and x_discrete, random_state=random_seed) for
-        x, x_discrete in zip(X.T, is_disc)
+        evaluate_mi(x, y, x_discrete, y_discrete=True, adjusted=adjusted and x_discrete,
+                    random_state=random_seed) for x, x_discrete in zip(X.T, is_disc)
     ])
 
     # The cost based will substract lambda*cost for each item of initial_scores
     initial_scores_mcost = initial_scores - cost_param * cost_vec
 
     if MI_matrix is None:
-        matrix_MI_Xk_Xj = evaluate_pairwise_mutual_information(X, is_disc, random_seed)
+        matrix_MI_Xk_Xj = evaluate_pairwise_mutual_information(X, is_disc, random_seed=random_seed,
+                                                               adjusted=adjusted)
     else:
         matrix_MI_Xk_Xj = MI_matrix
 
@@ -317,7 +318,8 @@ def JMI(X, y, is_disc, cost_vec=None, cost_param=0, num_features_to_select=None,
     # Create a dictionary that will contains the corresponding MI matrices given the different
     # unique values of y.
     if MI_conditional is None:
-        MI_condY = evaluate_conditional_mutual_information(X, is_disc, y, random_seed)
+        MI_condY = evaluate_conditional_mutual_information(X, is_disc, y, random_seed=random_seed,
+                                                           adjusted=adjusted)
     else:
         MI_condY = MI_conditional
 
@@ -529,12 +531,10 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             corresponding scores used to obtain the ranking.
         sim_matrix (numpy.ndarray):
             the pairwise distance/proximity matrix used.
-
     """
 
-    y = np.array(y)
-    nTrain = X.shape[0]
-    nCov = X.shape[1]
+    y = np.asarray(y)
+    nTrain, nCov = X.shape
 
     if proximity not in ['distance', 'rf prox']:
         raise ValueError(
@@ -577,9 +577,8 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             distMat = spatial.distance.squareform(spatial.distance.pdist(X_norm, 'cityblock'))
         else:
             distMat = sim_matrix
-
     # If we use the RF proximity matrix instead of classic distance:
-    if proximity == "rf prox":
+    elif proximity == "rf prox":
         if sim_matrix is None:
             # Train a random forest and deduce the proximity matrix
             model = RandomForestClassifier(n_estimators=n_estimators,
@@ -600,22 +599,20 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
     # To store the indices of the nearest hits
     kNearHits = np.zeros(num_neighbors, dtype=int)
     # To store the indices of the misses for all class different than R_i
-    kNearMisses = np.zeros((nClasses-1, num_neighbors), dtype=int)
+    kNearMisses = np.zeros((nClasses - 1, num_neighbors), dtype=int)
 
     # Initialize the weights to zero
-    weightsDic = dict()
-    for cov in range(nCov):
-        weightsDic[cov] = 0
+    weightsDic = {i: 0 for i in range(nCov)}
 
     m = nTrain  # Here we compute the score using all the training data
     for i in range(m):
         # For the same class that R_i, keep the indices achieving the k lower distances
         argSorted = np.argsort(distMat[i, y == y[i]])  # We withdraw the i-th element
-        kNearHits = argSorted[argSorted != i][0:num_neighbors]
+        kNearHits = argSorted[argSorted != i][:num_neighbors]
         classDifRi = classes[classes != y[i]]
         for c in range(len(classDifRi)):
             tmp = classDifRi[c]
-            kNearMisses[c, :] = np.argsort(distMat[i, y == tmp])[0:num_neighbors]
+            kNearMisses[c, :] = np.argsort(distMat[i, y == tmp])[:num_neighbors]
 
         # Compute the elements diff(A, R_i, H_j) for j in 1:k, per feature A
         for cov in range(nCov):
@@ -626,7 +623,7 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
                     for hit in kNearHits
                 ]
                 np.testing.assert_allclose(compDistRiFromHits, compDistRiFromHits_old, atol=1e-9)
-            weightsDic[cov] -= np.mean(compDistRiFromHits)/m
+            weightsDic[cov] -= np.mean(compDistRiFromHits) / m
 
             # For each class different from the one of R_i, do the same with
             # weight by prior proba ratio
@@ -642,13 +639,13 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
 
                 # Reminder: pClasses is a dictionary
                 tmp = classDifRi[c]
-                weightsDic[cov] += (pClasses[tmp] / (1-pClasses[y[i]])) \
+                weightsDic[cov] += (pClasses[tmp] / (1 - pClasses[y[i]])) \
                     * np.mean(compDistRiFromMisses) / m
 
             # Finally also update with the penalization (cost)
             # I do not use the /(m*k) term but only /m to be more consistent
             # with the other criteria of this module.
-            weightsDic[cov] -= cost_param*cost_vec[cov]/(m)
+            weightsDic[cov] -= cost_param*cost_vec[cov] / m
 
     # Return the number of feature requested, in decreasing order, plus weights
     ranking = np.argsort(-np.array(list(weightsDic.values())))
