@@ -249,8 +249,10 @@ qtconsole==5.3.1
     # via jupyter
 qtpy==2.1.0
     # via qtconsole
-rpy2==3.5.2
-    # via cost-based-selection
+rpy2==3.4.5
+    # via
+    #   -r requirements.in
+    #   cost-based-selection
 scikit-learn==1.1.1
     # via sklearn
 scipy==1.8.1
