@@ -125,9 +125,7 @@ markupsafe==2.1.1
     #   jinja2
     #   nbconvert
 matplotlib==3.5.2
-    # via
-    #   cost-based-selection
-    #   seaborn
+    # via cost-based-selection
 matplotlib-inline==0.1.3
     # via
     #   ipykernel
@@ -170,7 +168,6 @@ numpy==1.22.4
     #   pandas
     #   scikit-learn
     #   scipy
-    #   seaborn
 packaging==21.3
     # via
     #   ipykernel
@@ -179,9 +176,7 @@ packaging==21.3
     #   pytest
     #   qtpy
 pandas==1.4.2
-    # via
-    #   cost-based-selection
-    #   seaborn
+    # via cost-based-selection
 pandocfilters==1.5.0
     # via nbconvert
 parso==0.8.3
@@ -263,9 +258,6 @@ scipy==1.8.1
     #   cost-based-selection
     #   networkit
     #   scikit-learn
-    #   seaborn
-seaborn==0.11.2
-    # via cost-based-selection
 send2trash==1.8.0
     # via notebook
 six==1.16.0

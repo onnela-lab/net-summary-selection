@@ -14,8 +14,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/onnela-lab/net_summary_selection",
-    packages=setuptools.find_packages(include=['cost_based_selection',
-                                               'cost_based_selection.*']),
+    packages=setuptools.find_packages('cost_based_selection'),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD-3-Clause License",
@@ -33,7 +32,6 @@ setuptools.setup(
             'pandas>=1.1.3',
             'rpy2>=2.9.3',
             'scipy>=1.5.2',
-            'seaborn>=0.11.0',
             'sklearn',
             'tqdm',
             'doit',
