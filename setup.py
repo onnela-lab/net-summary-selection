@@ -21,7 +21,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    ext_modules=cythonize('cost_based_selection/*.pyx', annotate=True),
+    ext_modules=cythonize('cost_based_selection/**/*.pyx', annotate=True),
     install_requires=[
             'cython',
             'joblib>=0.17.0',
