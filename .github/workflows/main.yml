@@ -27,7 +27,7 @@ jobs:
           key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}-R-cache-v2
       - name: "Install dependencies"
         run: |
-          R -e 'install.packages("ranger", version="0.14.1", repos="http://cran.r-project.org/")'
+          R -e 'if (!require("ranger")) install.packages("ranger", version="0.14.1", repos="http://cran.r-project.org/")'
           # Install cython first because we need it for setup.py.
           pip install `cat requirements.txt | grep cython`
           pip install -r requirements.txt
