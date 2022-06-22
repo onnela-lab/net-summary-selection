@@ -591,6 +591,8 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
             distMat = -proxMatRF
         else:
             distMat = -sim_matrix
+    else:
+        raise ValueError(proximity)
 
     # For each training data R_i:
     # Search for k nearest hits
