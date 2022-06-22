@@ -2,7 +2,7 @@ from cost_based_selection.old import cost_based_methods as cost_based_methods_ol
 from cost_based_selection.cost_based_methods import util
 import numpy as np
 import pytest
-from scipy import stats
+from scipy import spatial, stats
 
 
 @pytest.mark.parametrize('adjusted', [False, True], ids=["unadjusted", "adjusted"])
@@ -43,3 +43,17 @@ def test_marginal_conditional_mi_regression(adjusted: bool, first_discrete: bool
         if not np.allclose(a, b):
             corr, _ = stats.pearsonr(a, b)
             assert corr > 0.5, f"MI not correlated for {key}"
+
+
+@pytest.mark.parametrize("p", [1, 2])
+def test_nearest_neighbor(p):
+    X = np.random.normal(0, 1, (100, 5))
+    distance = spatial.distance.cdist(X, X, p=p, metric="minkowski")
+    nn_minkowski = util.NearestNeighbors(X, p)
+    nn_precomputed = util.NearestNeighbors(X, distance)
+    # Compare nearest neighbors for a few samples.
+    for i in np.random.randint(X.shape[0], size=10):
+        distance_minkowski, neighbors_minkowski = nn_minkowski.query(X[i], 5)
+        distance_precomputed, neighbors_precomputed = nn_precomputed.query(i, 5)
+        np.testing.assert_allclose(distance_minkowski, distance_precomputed)
+        np.testing.assert_allclose(neighbors_minkowski, neighbors_precomputed)

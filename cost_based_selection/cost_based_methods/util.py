@@ -1,8 +1,11 @@
 import itertools as it
+import numbers
 import numpy as np
+from scipy.spatial import KDTree
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from sklearn.metrics import adjusted_mutual_info_score
 from tqdm import tqdm
+import typing
 
 
 def random_ranking(X, y, is_disc, cost_vec=None, cost_param=0):
@@ -110,3 +113,53 @@ def evaluate_conditional_mutual_information(
 
         MI_condY[valY] = matTmp
     return MI_condY
+
+
+class NearestNeighbors:
+    """
+    Nearest neighbor search, using k-d trees for Minkowski metrics and brute force for precomputed
+    distances.
+
+    Args:
+        X: Coordinates of points with shape `(num_reference, num_features)`, where `num_reference`
+            is the number of elements that can be queried.
+        distance: L-p norm if a float; precomputed distance if an array. The precomputed array
+            has shape `(num_reference, num_query)` and need not be square.
+    """
+    def __init__(self, X: np.ndarray, distance: float):
+        self.X = X
+        self.num_reference, self.num_features = X.shape
+        self.distance = distance
+
+        if precomputed := isinstance(distance, np.ndarray):
+            num_reference, self.num_query = distance.shape
+            assert num_reference == self.num_reference
+            self.tree = None
+        else:
+            self.num_query = None
+            self.tree = KDTree(self.X)
+        self.precomputed = precomputed
+
+    def query(self, x: typing.Union[np.ndarray, int], num_neighbors: int,
+              return_distance: bool = True):
+        """
+        Query for nearest neighbors.
+
+        Args:
+            x: Vector of coordinates if `distance` is a float; index in [0, num_query) if
+                precomputed.
+
+        Returns:
+            neighbors:
+        """
+        if self.precomputed:
+            assert isinstance(x, numbers.Integral) and 0 <= x < self.num_query
+            distance = self.distance[:, x]
+            neighbors = np.argsort(distance)[:num_neighbors]
+            distance = distance[neighbors]
+        else:
+            distance, neighbors = self.tree.query(x, k=num_neighbors, p=self.distance)
+
+        if return_distance:
+            return distance, neighbors
+        return neighbors
