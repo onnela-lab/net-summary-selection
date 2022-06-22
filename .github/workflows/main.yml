@@ -24,7 +24,7 @@ jobs:
           path: |
             ${{ env.pythonLocation }}
             ${{ env.R_LIBS_USER }}/*
-          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}-R-cache
+          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}-R-cache-v2
       - name: "Install dependencies"
         run: |
           # Install cython first because we need it for setup.py.
