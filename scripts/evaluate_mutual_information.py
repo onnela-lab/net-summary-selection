@@ -1,6 +1,6 @@
 import argparse
 from cost_based_selection import preprocessing_utils
-from cost_based_selection import cost_based_methods
+from cost_based_selection.cost_based_methods import util
 import logging
 import os
 import pickle
@@ -25,10 +25,10 @@ def __main__():
     # Evaluate the marginal and conditional mutual information and save.
     result = {
         'args': vars(args),
-        'marginal': cost_based_methods.evaluate_pairwise_mutual_information(
+        'marginal': util.evaluate_pairwise_mutual_information(
             data['X'], data['is_discrete'], args.adjusted, progress=True,
         ),
-        'conditional': cost_based_methods.evaluate_conditional_mutual_information(
+        'conditional': util.evaluate_conditional_mutual_information(
             data['X'], data['is_discrete'], data['y'], args.adjusted, progress=True,
         )
     }
