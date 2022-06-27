@@ -1,6 +1,7 @@
 import itertools as it
 import numbers
 import numpy as np
+from scipy.special import softmax
 from scipy.spatial import KDTree
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from sklearn.metrics import adjusted_mutual_info_score
@@ -14,21 +15,23 @@ def random_ranking(X, y, is_disc, cost_vec=None, cost_param=0):
     """
     # Select features sequentially proportional to their inverse selection probability.
     if cost_vec is None:
-        proba = np.ones(X.shape[1])
+        log_proba = np.zeros(X.shape[1])
     else:
         assert cost_vec.shape == (X.shape[1],)
-        proba = cost_vec ** -cost_param
+        log_proba = -cost_param * np.log(cost_vec)
+
+    assert log_proba.shape == (X.shape[1],)
 
     # "Rank" the features by sequentially selecting them proportional to the given probability. We
     # first convert to lists because they are easier to deal with for sequential sampling.
-    candidates = list(np.arange(proba.size))
-    proba = list(proba)
+    candidates = list(np.arange(log_proba.size))
+    log_proba = list(log_proba)
     ranking = []
     while candidates:
         # We need to renormalize the probabilities each time.
-        idx = np.random.choice(len(proba), p=np.asarray(proba) / np.sum(proba))
+        idx = np.random.choice(len(log_proba), p=softmax(log_proba))
         ranking.append(candidates.pop(idx))
-        proba.pop(idx)
+        log_proba.pop(idx)
     return ranking,
 
 
