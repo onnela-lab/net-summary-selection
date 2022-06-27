@@ -1,14 +1,20 @@
-# Selection of summary statistics for network model choice with approximate Bayesian computation
-We here provide a Python package named `cost_based_selection` associated to our manuscript **Selection of summary statistics for network model choice with approximate Bayesian computation** *by L. Raynal and J.-P. Onnela*.
+# Selection of summary statistics for network model choice [![CI](https://github.com/onnela-lab/net-summary-selection/actions/workflows/main.yml/badge.svg)](https://github.com/onnela-lab/net-summary-selection/actions/workflows/main.yml)
+
+We here provide a Python package named `cost_based_selection` associated with our manuscript
+
+L. Raynal and J.-P. Onnela. "Selection of summary statistics for network model choice." *arXiv*, [2101.07766](https://arxiv.org/abs/2101.07766), 2021.
 
 ## Table of contents
+
 * [Description](#description)
 * [Installation](#installation)
+* [Reproducing the results](#reproducing-the-results)
 * [Package outline](#package-outline)
 * [Simple examples](#simple-examples)
 * [Authors](#authors)
 
 ## Description
+
 This project focuses on cost-based selection of network features. Indeed, when solving network inference problems with approximate Bayesian computation (ABC), because ABC requires simulating a large number of data that are summarized thanks to some features, it is critical to select them to avoid the curse of dimensionality. However, while many features can be used to encode the network structure, their computational complexity can be highly variable and this can quickly create a bottleneck, making the use of ABC even more difficult when working with large network data.
 
 Thanks to cost-based filter selection methods, for classification problems, we take into consideration the computational cost associated to each feature during the feature selection process, to create a balance between total feature cost and classification accuracy.
@@ -17,14 +23,19 @@ In our paper we also investigate the benefit of using smaller networks (with few
 
 ## Installation
 
-Install with `pip` from a terminal
-```shell
-pip install git+https://github.com/onnela-lab/net_summary_selection.git
-```
+1. Clone the git repository or download the code as an archive.
+2. Set up a new Python virtual environment, e.g., using `pyenv`. This code has been tested on python 3.9.9.
+3. Install all python requirements by running `pip install -r requirements.txt`.
+4. Ensure an R interpreter is installed (see https://www.r-project.org for installation instructions).
+5. Install the [`ranger`](https://www.rdocumentation.org/packages/ranger/versions/0.14.1/topics/ranger) package for random forests, e.g., by running `R -e 'if (!require("ranger")) install.packages("ranger", version="0.14.1", repos="http://cran.r-project.org/")'`.
+
+## Reproducing the results
+
+You can reproduce all results presented in our paper by running `doit` from the root of the repository. You may want to parallelize the execution by running `doit -n [number of cores]`. Your results may differ slightly from ours because computation times differ across machines and depend on other processes running on your machine. For reference, the results presented in the manuscript were obtained with `doit -n 6` on a M1 Macbook Pro (2020) with 16GB of memory.
 
 ## Package outline
 
-The `cost_based_selection\data` folder contains the simulated data employed in our paper. 
+The `cost_based_selection\data` folder contains the simulated data employed in our paper.
 The `paper_examples` folder contains the scripts to reproduce the examples and analyses we performed.
 The `simple_examples` folder contains very simple examples to illustrate how to use the various functions of the package.
 
@@ -93,15 +104,15 @@ We now can obtain a feature ranking given a cost penalization parameter value, o
 from cost_based_selection import cost_based_methods
 
 # Given a unique cost penalization parameter
-ranking, *rest = cost_based_methods.JMI(X = X_train, y = y_train, 
-                                        is_disc = is_disc, cost_vec = avg_cost_vec, 
+ranking, *rest = cost_based_methods.JMI(X = X_train, y = y_train,
+                                        is_disc = is_disc, cost_vec = avg_cost_vec,
                                         cost_param = 1)
 dfSummaries.columns[ranking] # Summaries in decreasing order of importance
 
 # Given a list of cost penalization parameters
 grid_cost_param = [0, 1, 2, 3, 4]
-dfRank = cost_based_methods.multi_JMI(X = X_train, y = y_train, 
-                                      is_disc = is_disc, cost_vec = avg_cost_vec, 
+dfRank = cost_based_methods.multi_JMI(X = X_train, y = y_train,
+                                      is_disc = is_disc, cost_vec = avg_cost_vec,
                                       cost_param_vec = grid_cost_param)
 ```
 Finally, using the rankings we can plot the k-fold cross-validation accuracy of a classifier and visualize the trade-off between total cost reduction and classification accuracy depending on the penalization parameters. This is useful to determine a correct value for this latter.
@@ -118,7 +129,7 @@ avg_accuracy, std_accuracy, \
 total_cost, prop_noise = \
 cost_based_analysis.accuracy_classifier_plot(dfPen_Ranking = dfRank, X_val = X_val,
                                              y_val = y_val, cost_vec = avg_cost_vec,
-                                             noise_idx = noise_idx, 
+                                             noise_idx = noise_idx,
                                              subset_size = subset_size,
                                              classifier_func = classifier,
                                              args_classifier = dict_args,
