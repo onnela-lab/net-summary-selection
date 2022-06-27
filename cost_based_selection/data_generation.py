@@ -103,22 +103,22 @@ def DMC(seed_network, num_nodes, q_mod, q_con):
     seed_num_nodes = G.number_of_nodes()
     for v in range(seed_num_nodes, num_nodes):
         # Select a random node u in the graph for duplication
-        u = random.choice( list(G.nodes()) )
+        u = random.choice(list(G.nodes()))
         # Add a new node to the graph
         G.add_node(v)
         # and duplicate the relationships of u to v
-        G.add_edges_from([(v,w) for w in G.neighbors(u)])
+        G.add_edges_from([(v, w) for w in G.neighbors(u)])
         # For each neighbors of u
         for w in list(G.neighbors(u)):
             # We generate a Bernoulli random variable with parameter q_mod
             # if it's 1 we remove at random the relationship (v,w) or (u,w)
             if ss.bernoulli.rvs(q_mod):
-                edge = random.choice([(v,w), (u,w)])
-                G.remove_edge(*edge) # * to unpack the tuple edge
+                edge = random.choice([(v, w), (u, w)])
+                G.remove_edge(*edge)  # * to unpack the tuple edge
         # Finally, with probability q_con, add an edge between
         # the duplicated and duplicate nodes
         if ss.bernoulli.rvs(q_con):
-            G.add_edge(u,v)
+            G.add_edge(u, v)
     return G
 
 
@@ -130,7 +130,7 @@ def DMR(seed_network, num_nodes, q_del, q_new):
 
     R. V. Solé,  R. Pastor-Satorras, E. Smith, and T. B. Kepler.
     A model of large-scale proteome evolution. Advances in Complex Systems,
-    5(1):43–54, 2002.
+    5(1):43--54, 2002.
 
     Args:
         seed_network (networkx.classes.graph.Graph):
@@ -161,16 +161,16 @@ def DMR(seed_network, num_nodes, q_del, q_new):
         # Add a new node to the graph
         G.add_node(v)
         # and duplicate the relationships of u to v
-        G.add_edges_from([(v,w) for w in G.neighbors(u)])
+        G.add_edges_from([(v, w) for w in G.neighbors(u)])
         # For each neighbor of v
         for w in list(G.neighbors(v)):
             # with probability q_del we remove the link (v,w)
             if ss.bernoulli.rvs(q_del):
-                G.remove_edge(v,w)
+                G.remove_edge(v, w)
         # And for all other node, we establish a link with v with
         # proba q_new/number_of_nodes_before_duplication
-        nodes_to_link = random.sample(node_list, ss.binom.rvs(v, q_new/v))
-        G.add_edges_from([(v,x) for x in nodes_to_link])
+        nodes_to_link = random.sample(node_list, ss.binom.rvs(v, q_new / v))
+        G.add_edges_from([(v, x) for x in nodes_to_link])
 
     return G
 
@@ -224,16 +224,16 @@ def DMC_DMR_ref_table(seed_network, num_sim_model, num_nodes):
         q_del_sim = ss.uniform.rvs(0.25, 0.5, size=1)[0]
         q_new_sim = ss.uniform.rvs(0.25, 0.5, size=1)[0]
 
-        simuGraphDMC = DMC(seed_network = seed_network, num_nodes = num_nodes,
-                           q_mod = q_mod_sim, q_con = q_con_sim)
-        simuGraphDMR = DMR(seed_network = seed_network, num_nodes = num_nodes,
-                           q_del = q_del_sim, q_new = q_new_sim)
+        simuGraphDMC = DMC(seed_network=seed_network, num_nodes=num_nodes,
+                           q_mod=q_mod_sim, q_con=q_con_sim)
+        simuGraphDMR = DMR(seed_network=seed_network, num_nodes=num_nodes,
+                           q_del=q_del_sim, q_new=q_new_sim)
 
         dictSums1, dictTimes1, dictIsDisc1 = summaries.compute_summaries(simuGraphDMC)
         dictSums2, dictTimes2, dictIsDisc2 = summaries.compute_summaries(simuGraphDMR)
 
-        resList1.append( [1, dictSums1, dictTimes1, dictIsDisc1] )
-        resList2.append( [2, dictSums2, dictTimes2, dictIsDisc2] )
+        resList1.append([1, dictSums1, dictTimes1, dictIsDisc1])
+        resList2.append([2, dictSums2, dictTimes2, dictIsDisc2])
 
     modIndex = [1]*num_sim_model + [2]*num_sim_model
 
