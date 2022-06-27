@@ -57,3 +57,7 @@ def test_nearest_neighbor(p):
         distance_precomputed, neighbors_precomputed = nn_precomputed.query(i, 5)
         np.testing.assert_allclose(distance_minkowski, distance_precomputed)
         np.testing.assert_allclose(neighbors_minkowski, neighbors_precomputed)
+        assert distance_minkowski[0] == 0
+        assert distance_precomputed[0] == 0
+        assert neighbors_minkowski[0] == i
+        assert neighbors_precomputed[0] == i
