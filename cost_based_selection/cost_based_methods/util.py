@@ -118,17 +118,17 @@ def evaluate_conditional_mutual_information(
 class NearestNeighbors:
     """
     Nearest neighbor search, using k-d trees for Minkowski metrics and brute force for precomputed
-    distances.
+    distances. It mimics the interface of :class:`scipy.spatial.KDTree`.
 
     Args:
-        X: Coordinates of points with shape `(num_reference, num_features)`, where `num_reference`
-            is the number of elements that can be queried.
+        data: Coordinates of points with shape `(num_reference, num_features)`, where
+            `num_reference` is the number of elements that can be queried.
         distance: L-p norm if a float; precomputed distance if an array. The precomputed array
             has shape `(num_reference, num_query)` and need not be square.
     """
-    def __init__(self, X: np.ndarray, distance: float):
-        self.X = X
-        self.num_reference, self.num_features = X.shape
+    def __init__(self, data: np.ndarray, distance: float):
+        self.data = data
+        self.num_reference, self.num_features = data.shape
         self.distance = distance
 
         if precomputed := isinstance(distance, np.ndarray):
@@ -137,11 +137,10 @@ class NearestNeighbors:
             self.tree = None
         else:
             self.num_query = None
-            self.tree = KDTree(self.X)
+            self.tree = KDTree(self.data)
         self.precomputed = precomputed
 
-    def query(self, x: typing.Union[np.ndarray, int], num_neighbors: int,
-              return_distance: bool = True):
+    def query(self, x: typing.Union[np.ndarray, int], k: int, return_distance: bool = True):
         """
         Query for nearest neighbors.
 
@@ -155,10 +154,10 @@ class NearestNeighbors:
         if self.precomputed:
             assert isinstance(x, numbers.Integral) and 0 <= x < self.num_query
             distance = self.distance[:, x]
-            neighbors = np.argsort(distance)[:num_neighbors]
+            neighbors = np.argsort(distance)[:k]
             distance = distance[neighbors]
         else:
-            distance, neighbors = self.tree.query(x, k=num_neighbors, p=self.distance)
+            distance, neighbors = self.tree.query(x, k=k, p=self.distance)
 
         if return_distance:
             return distance, neighbors

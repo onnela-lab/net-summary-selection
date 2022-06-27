@@ -4,11 +4,12 @@ from scipy import spatial
 from sklearn.ensemble import RandomForestClassifier
 from ..old.cost_based_methods import _private_proximity_matrix
 from ._util import evaluate_proximity_matrix
+from .util import NearestNeighbors
 
 
-def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to_select=None,
-            proximity="distance", min_samples_leaf=100, n_estimators=500, sim_matrix=None,
-            is_disc=None, debug=False, norm: str = "range"):
+def _reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to_select=None,
+             proximity="distance", min_samples_leaf=100, n_estimators=500, sim_matrix=None,
+             is_disc=None, debug=False, norm: str = "range"):
     """ Cost-based feature ranking adaptation of the ReliefF algorithm.
 
     Cost-based adaptation of the ReliefF algorithm, where the nearest neighbors
@@ -182,3 +183,95 @@ def reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_to
     ranking = ranking.tolist()
 
     return ranking, weightsDic, distMat
+
+
+def reliefF(X: np.ndarray, y: np.ndarray, cost_vec: np.ndarray = None, cost_param: float = 0,
+            num_neighbors: int = 10, distance="l1", normalization="range",
+            n_estimators: int = 500, min_samples_leaf: int = 100, is_disc=None):
+    """
+    Args:
+        X:
+        y:
+        cost_vec:
+        penalty:
+        num_neighbors:
+        distance:
+        normalization:
+        n_estimators:
+        min_samples_leaf:
+
+    Returns:
+        ranking:
+        weight:
+    """
+    num_samples, num_features = X.shape
+    if cost_vec is None:
+        cost_vec = np.zeros(num_features)
+    assert y.shape == (num_samples,)
+    assert cost_vec.shape == (num_features,)
+
+    if normalization == "range":
+        Xmin = np.min(X, axis=0)
+        Xmax = np.max(X, axis=0)
+        offset = Xmin
+        scale = Xmax - Xmin
+    elif normalization == "robust":
+        l, offset, u = np.quantile(X, [.25, .5, .75], axis=0)
+        scale = (u - l)
+    elif normalization == "none":
+        offset = 0
+        scale = 1
+    elif normalization == "standardize":
+        offset = X.mean(axis=0)
+        scale = X.std(axis=0)
+    else:
+        raise NotImplementedError(normalization)
+
+    X = (X - offset) / np.where(scale < 1e-9, 1, scale)
+
+    # Build nearest neighbor lookup trees by class.
+    fraction_by_cls = {}
+    trees_by_cls = {}
+
+    if distance == "l1":
+        for cls in np.unique(y):
+            fltr = y == cls
+            fraction_by_cls[cls] = fltr.mean()
+            trees_by_cls[cls] = NearestNeighbors(X[fltr], distance=1)
+    elif distance == "rf":
+        classifier = RandomForestClassifier(n_estimators=n_estimators,
+                                            min_samples_leaf=min_samples_leaf)
+        classifier.fit(X, y)
+        proximity = evaluate_proximity_matrix(classifier.apply(X))
+        for cls in np.unique(y):
+            fltr = y == cls
+            fraction_by_cls[cls] = fltr.mean()
+            trees_by_cls[cls] = NearestNeighbors(X[fltr], distance=-proximity[fltr])
+    else:
+        raise NotImplementedError(distance)
+
+    # Iterate over all samples and update weights.
+    weights = np.zeros(num_features)
+    for i in range(num_samples):
+        for cls, tree in trees_by_cls.items():
+            # Get neighbors using L1 norm. If cls is the same as y[i], we get one more neighbor
+            # because the first one will be the instance itself.
+            x = X[i] if distance == "l1" else i
+            if cls == y[i]:
+                _, neighbors = tree.query(x, k=num_neighbors + 1)
+                neighbors = neighbors[1:]
+            else:
+                _, neighbors = tree.query(x, k=num_neighbors)
+            mean_distance = np.abs(X[i] - tree.data[neighbors]).mean(axis=0)
+
+            # Update the feature weights.
+            if cls == y[i]:
+                weights -= mean_distance / num_samples
+            else:
+                weights += mean_distance / num_samples \
+                    * fraction_by_cls[cls] / (1 - fraction_by_cls[y[i]])
+
+    weights -= cost_param * cost_vec
+    ranking = np.argsort(-weights)
+
+    return ranking, weights[ranking]
