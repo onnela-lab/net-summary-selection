@@ -1,5 +1,6 @@
 import numpy as np
 import rpy2.robjects
+from scipy.special import softmax
 
 
 def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
@@ -58,7 +59,9 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
 
     # Compute the rf weights for sampling the covariates
     # Note, a base importance of 0.01 is added to all features to avoid num. errors
-    sampling_weights = (1/(cost_vec+0.01)**cost_param) / (np.sum(1/(cost_vec+0.01)**cost_param))
+    log_prob = - cost_param * np.log(cost_vec)
+    sampling_weights = np.maximum(softmax(log_prob), 1e-9)
+    sampling_weights /= sampling_weights.sum()
 
     # For format compatibility between python and R (rpy2)
     from rpy2.robjects import numpy2ri
