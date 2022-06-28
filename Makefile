@@ -13,4 +13,7 @@ tests :
 	OMP_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 pytest -v -s \
 		--cov=cost_based_selection --cov-report=html --cov-report=term --disable-warnings
 
-build : tests
+build : lint tests
+
+lint :
+	flake8
