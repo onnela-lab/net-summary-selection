@@ -601,6 +601,12 @@ def reliefF(X, y, cost_vec = None, cost_param = 0, num_neighbors = 10, num_featu
     nTrain = X.shape[0]
     nCov = X.shape[1]
 
+    # For consistency with the new implementation.
+    if proximity == "l1":
+        proximity = "distance"
+    elif proximity == "rf":
+        proximity = "rf prox"
+
     if proximity not in ['distance', 'rf prox']:
         raise ValueError("The argument proximity must be either 'distance' or 'rf prox'.")
 
