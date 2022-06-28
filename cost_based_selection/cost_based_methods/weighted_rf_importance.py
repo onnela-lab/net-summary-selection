@@ -59,9 +59,10 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
 
     # Compute the rf weights for sampling the covariates
     # Note, a base importance of 0.01 is added to all features to avoid num. errors
-    log_prob = - cost_param * np.log(cost_vec)
+    log_prob = - cost_param * np.log(np.maximum(cost_vec, 1e-9))
     sampling_weights = np.maximum(softmax(log_prob), 1e-9)
     sampling_weights /= sampling_weights.sum()
+    assert np.all(np.isfinite(sampling_weights))
 
     # For format compatibility between python and R (rpy2)
     from rpy2.robjects import numpy2ri
