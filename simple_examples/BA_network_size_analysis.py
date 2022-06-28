@@ -11,7 +11,7 @@ networks using small rather than large networks.
 import multiprocessing
 from cost_based_selection import data_generation
 from cost_based_selection import preprocessing_utils
-from cost_based_selection import network_size_analysis
+from cost_based_selection.old import network_size_analysis
 
 ### Data generation
 
@@ -33,9 +33,9 @@ dfIsDisc_large, dfTimes_large = data_generation.BA_ref_table(num_sim_model = num
 
 # Drop the redundant features when using small networks if any
 dfModIndex_small, dfSummaries_small, \
-dfIsDisc_small, dfTimes_small = preprocessing_utils.drop_redundant_features(dfModIndex_small, 
-                                                                            dfSummaries_small, 
-                                                                            dfIsDisc_small, 
+dfIsDisc_small, dfTimes_small = preprocessing_utils.drop_redundant_features(dfModIndex_small,
+                                                                            dfSummaries_small,
+                                                                            dfIsDisc_small,
                                                                             dfTimes_small)
 
 # Reorder the features by average computation time to compute each summary statistic
@@ -62,7 +62,7 @@ dfIsDisc_large, dfTimes_large = preprocessing_utils.data_reordering_identical(df
 
 ##### Analyses: 1 replication
 
-# We provide a function to compare the feature rankings obtained with the two 
+# We provide a function to compare the feature rankings obtained with the two
 # network sizes, see the documentation of the function
 # cost_based_selection.network_size_analysis.common_features_plot.
 #
@@ -97,7 +97,7 @@ dict_SVM_acc_dec, dict_knn_acc_dec = network_size_analysis.common_features_diffe
 
 # Finally, we can use this function to perform num_rep replicate analyses,
 # where each replicate relies on different partitioning of the reference tables,
-# and use the function network_size_analysis.analyze_replication_res to compute 
+# and use the function network_size_analysis.analyze_replication_res to compute
 # quantities of interest over the replicates and plot related graphs.
 
 num_rep = 5
@@ -107,8 +107,8 @@ num_cores = max(1, multiprocessing.cpu_count() - 1)
 
 replicate_analysis_res = network_size_analysis.replication_common_features_difference_accuracy(dfSummaries_small = dfSummaries_small,
                                                                                                dfSummaries_large = dfSummaries_large,
-                                                                                               dfModIndex_small = dfModIndex_small, 
-                                                                                               dfModIndex_large = dfModIndex_large, 
+                                                                                               dfModIndex_small = dfModIndex_small,
+                                                                                               dfModIndex_large = dfModIndex_large,
                                                                                                is_disc = is_disc,
                                                                                                subset_size_vec = subset_size_vec,
                                                                                                val_size = 0.5,

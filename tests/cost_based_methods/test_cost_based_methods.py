@@ -5,7 +5,7 @@ from cost_based_selection import preprocessing_utils
 import functools as ft
 import numpy as np
 import pytest
-from scipy import special, stats
+from scipy import special
 import typing
 
 

@@ -9,7 +9,7 @@ the paper associated to this package.
 from cost_based_selection import data_generation
 from cost_based_selection import preprocessing_utils
 from cost_based_selection import cost_based_methods
-from cost_based_selection import cost_based_analysis
+from cost_based_selection.old import cost_based_analysis
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
@@ -25,7 +25,7 @@ dfModIndex, dfSummaries, \
 dfIsDisc, dfTimes = data_generation.BA_ref_table(num_sim_model = num_sim_model,
                                                  num_nodes = num_nodes)
 
-# The outputs generated are pandas DataFrames containing the model indexes, 
+# The outputs generated are pandas DataFrames containing the model indexes,
 # the summary statistics values, the nature of the summaries (i.e. discrete or
 # continuous numerical features), the times in seconds to generate each entry
 # and each summary.
@@ -48,7 +48,7 @@ dfIsDisc, dfTimes = preprocessing_utils.data_reordering_by_avg_cost(dfModIndex,
 # Extract the indexes of the noise features
 noise_idx = preprocessing_utils.noise_position(dfSummaries)
 
-### Compute the average computational times and normalize 
+### Compute the average computational times and normalize
 ### (between 0 and 1 and to sum to 1)
 
 avg_cost_vec = preprocessing_utils.compute_avg_cost(dfTimes)
@@ -66,7 +66,7 @@ is_disc = dfIsDisc.iloc[0,:].tolist()
  y_train, y_val) = train_test_split(X, y, test_size=0.5, random_state=123, stratify=y)
 
 # Select the best network features on the training set
-ranking, *rest = cost_based_methods.JMI(X = X_train, y = y_train, is_disc = is_disc, 
+ranking, *rest = cost_based_methods.JMI(X = X_train, y = y_train, is_disc = is_disc,
                                         cost_vec = avg_cost_vec, cost_param = 1)
 
 # ranking contains the ranked feature indexes in decreasing order of importance

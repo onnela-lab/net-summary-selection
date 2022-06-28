@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file runs the cost-based selection methods presented in our paper using a 
+This file runs the cost-based selection methods presented in our paper using a
 precomputed reference table related to the DMC and DMR models to classify.
 Each simulated network contains num_nodes = 1000 nodes.
 The performance of each methods is evaluated thanks to the classification
@@ -14,7 +14,7 @@ import pandas as pd
 
 from cost_based_selection import preprocessing_utils
 from cost_based_selection import cost_based_methods
-from cost_based_selection import cost_based_analysis
+from cost_based_selection.old import cost_based_analysis
 from pkg_resources import resource_filename
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
@@ -85,7 +85,7 @@ grid_cost_param_wRF = list(np.arange(0, 2, 0.002))
 
 
 # For the mRMR method
-dfRank_mRMR = cost_based_methods.multi_mRMR(X = X_train, y = y_train, is_disc = is_disc, 
+dfRank_mRMR = cost_based_methods.multi_mRMR(X = X_train, y = y_train, is_disc = is_disc,
                                            cost_vec = avg_cost_vec, cost_param_vec = grid_cost_param,
                                            num_features_to_select = None, random_seed = 123,
                                            num_cores = num_cores)
@@ -102,13 +102,13 @@ dfRank_JMIM = cost_based_methods.multi_JMIM(X = X_train, y = y_train, is_disc = 
                                             num_cores = num_cores)
 
 # For the classic reliefF method
-dfRank_reliefF_classic = cost_based_methods.multi_reliefF(X = X_train, y = y_train, 
+dfRank_reliefF_classic = cost_based_methods.multi_reliefF(X = X_train, y = y_train,
                                                           cost_vec = avg_cost_vec, cost_param_vec = grid_cost_param,
                                                           num_neighbors = 10, num_features_to_select = None,
                                                           proximity = "distance")
 
 # For the reliefF method when neighbors are deduced with the Breiman's similarity matrix
-dfRank_reliefF_rfprox = cost_based_methods.multi_reliefF(X = X_train, y = y_train, 
+dfRank_reliefF_rfprox = cost_based_methods.multi_reliefF(X = X_train, y = y_train,
                                                          cost_vec = avg_cost_vec, cost_param_vec = grid_cost_param,
                                                          num_neighbors = 10, num_features_to_select = None,
                                                          proximity = "rf prox", min_samples_leaf = 100, n_estimators = 500)
@@ -149,13 +149,13 @@ subset_size = 15
 # Using a 10-nearest-neighbors classifier
 classifier = KNeighborsClassifier
 dict_args = {'n_neighbors':10, 'n_jobs':num_cores}
-avg_accuracy_mRMR_knn, std_accuracy_mRMR_knn, total_cost_mRMR_knn, prop_noise_mRMR_knn = cost_based_analysis.accuracy_classifier_plot(dfPen_Ranking = dfRank_mRMR, 
-                                                                                                                                      X_val = X_val, 
+avg_accuracy_mRMR_knn, std_accuracy_mRMR_knn, total_cost_mRMR_knn, prop_noise_mRMR_knn = cost_based_analysis.accuracy_classifier_plot(dfPen_Ranking = dfRank_mRMR,
+                                                                                                                                      X_val = X_val,
                                                                                                                                       y_val = y_val,
                                                                                                                                       cost_vec = avg_cost_vec,
                                                                                                                                       noise_idx = noise_idx,
                                                                                                                                       subset_size = subset_size,
-                                                                                                                                      classifier_func = classifier, 
+                                                                                                                                      classifier_func = classifier,
                                                                                                                                       args_classifier = dict_args,
                                                                                                                                       num_fold = 3, save_name = "evol_mRMR_kNN_DMC_DMR.pdf",
                                                                                                                                       random_seed = 123)
@@ -168,7 +168,7 @@ avg_accuracy_mRMR_SVM, std_accuracy_mRMR_SVM, total_cost_mRMR_SVM, prop_noise_mR
                                                                                                                                       cost_vec = avg_cost_vec,
                                                                                                                                       noise_idx = noise_idx,
                                                                                                                                       subset_size = subset_size,
-                                                                                                                                      classifier_func = classifier, 
+                                                                                                                                      classifier_func = classifier,
                                                                                                                                       args_classifier = dict(),
                                                                                                                                       num_fold = 3, save_name = "evol_mRMR_SVM_DMC_DMR.pdf",
                                                                                                                                       random_seed = 123)
@@ -180,12 +180,12 @@ avg_accuracy_mRMR_SVM, std_accuracy_mRMR_SVM, total_cost_mRMR_SVM, prop_noise_mR
 classifier = KNeighborsClassifier
 dict_args = {'n_neighbors':10, 'n_jobs':num_cores}
 avg_accuracy_JMI_knn, std_accuracy_JMI_knn, total_cost_JMI_knn, prop_noise_JMI_knn = cost_based_analysis.accuracy_classifier_plot(dfPen_Ranking = dfRank_JMI,
-                                                                                                                                  X_val = X_val, 
+                                                                                                                                  X_val = X_val,
                                                                                                                                   y_val = y_val,
                                                                                                                                   cost_vec = avg_cost_vec,
                                                                                                                                   noise_idx = noise_idx,
                                                                                                                                   subset_size = subset_size,
-                                                                                                                                  classifier_func = classifier, 
+                                                                                                                                  classifier_func = classifier,
                                                                                                                                   args_classifier = dict_args,
                                                                                                                                   num_fold = 3, save_name = "evol_JMI_kNN_DMC_DMR.pdf",
                                                                                                                                   random_seed = 123)
@@ -198,7 +198,7 @@ avg_accuracy_JMI_SVM, std_accuracy_JMI_SVM, total_cost_JMI_SVM, prop_noise_JMI_S
                                                                                                                                   cost_vec = avg_cost_vec,
                                                                                                                                   noise_idx = noise_idx,
                                                                                                                                   subset_size = subset_size,
-                                                                                                                                  classifier_func = classifier, 
+                                                                                                                                  classifier_func = classifier,
                                                                                                                                   args_classifier = dict(),
                                                                                                                                   num_fold = 3, save_name = "evol_JMI_SVM_DMC_DMR.pdf",
                                                                                                                                   random_seed = 123)
@@ -209,12 +209,12 @@ avg_accuracy_JMI_SVM, std_accuracy_JMI_SVM, total_cost_JMI_SVM, prop_noise_JMI_S
 classifier = KNeighborsClassifier
 dict_args = {'n_neighbors':10, 'n_jobs':num_cores}
 avg_accuracy_JMIM_knn, std_accuracy_JMIM_knn, total_cost_JMIM_knn, prop_noise_JMIM_knn = cost_based_analysis.accuracy_classifier_plot(dfPen_Ranking = dfRank_JMIM,
-                                                                                                                                      X_val = X_val, 
+                                                                                                                                      X_val = X_val,
                                                                                                                                       y_val = y_val,
                                                                                                                                       cost_vec = avg_cost_vec,
                                                                                                                                       noise_idx = noise_idx,
                                                                                                                                       subset_size = subset_size,
-                                                                                                                                      classifier_func = classifier, 
+                                                                                                                                      classifier_func = classifier,
                                                                                                                                       args_classifier = dict_args,
                                                                                                                                       num_fold = 3, save_name = "evol_JMIM_kNN_DMC_DMR.pdf",
                                                                                                                                       random_seed = 123)
@@ -227,7 +227,7 @@ avg_accuracy_JMIM_SVM, std_accuracy_JMIM_SVM, total_cost_JMIM_SVM, prop_noise_JM
                                                                                                                                       cost_vec = avg_cost_vec,
                                                                                                                                       noise_idx = noise_idx,
                                                                                                                                       subset_size = subset_size,
-                                                                                                                                      classifier_func = classifier, 
+                                                                                                                                      classifier_func = classifier,
                                                                                                                                       args_classifier = dict(),
                                                                                                                                       num_fold = 3, save_name = "evol_JMIM_SVM_DMC_DMR.pdf",
                                                                                                                                       random_seed = 123)
@@ -238,12 +238,12 @@ avg_accuracy_JMIM_SVM, std_accuracy_JMIM_SVM, total_cost_JMIM_SVM, prop_noise_JM
 classifier = KNeighborsClassifier
 dict_args = {'n_neighbors':10, 'n_jobs':num_cores}
 avg_accuracy_reliefF_classic_knn, std_accuracy_reliefF_classic_knn, total_cost_reliefF_classic_knn, prop_noise_reliefF_classic_knn = cost_based_analysis.accuracy_classifier_plot(dfPen_Ranking = dfRank_reliefF_classic,
-                                                                                                                                                                                  X_val = X_val, 
+                                                                                                                                                                                  X_val = X_val,
                                                                                                                                                                                   y_val = y_val,
                                                                                                                                                                                   cost_vec = avg_cost_vec,
                                                                                                                                                                                   noise_idx = noise_idx,
                                                                                                                                                                                   subset_size = subset_size,
-                                                                                                                                                                                  classifier_func = classifier, 
+                                                                                                                                                                                  classifier_func = classifier,
                                                                                                                                                                                   args_classifier = dict_args,
                                                                                                                                                                                   num_fold = 3, save_name = "evol_reliefF_classic_kNN_DMC_DMR.pdf",
                                                                                                                                                                                   random_seed = 123)
@@ -256,7 +256,7 @@ avg_accuracy_reliefF_classic_SVM, std_accuracy_reliefF_classic_SVM, total_cost_r
                                                                                                                                                                                   cost_vec = avg_cost_vec,
                                                                                                                                                                                   noise_idx = noise_idx,
                                                                                                                                                                                   subset_size = subset_size,
-                                                                                                                                                                                  classifier_func = classifier, 
+                                                                                                                                                                                  classifier_func = classifier,
                                                                                                                                                                                   args_classifier = dict(),
                                                                                                                                                                                   num_fold = 3, save_name = "evol_reliefF_classic_SVM_DMC_DMR.pdf",
                                                                                                                                                                                   random_seed = 123)
@@ -285,7 +285,7 @@ avg_accuracy_reliefF_rf_SVM, std_accuracy_reliefF_rf_SVM, total_cost_reliefF_rf_
                                                                                                                                                               cost_vec = avg_cost_vec,
                                                                                                                                                               noise_idx = noise_idx,
                                                                                                                                                               subset_size = subset_size,
-                                                                                                                                                              classifier_func = classifier, 
+                                                                                                                                                              classifier_func = classifier,
                                                                                                                                                               args_classifier = dict(),
                                                                                                                                                               num_fold = 3, save_name = "evol_reliefF_rf_SVM_DMC_DMR.pdf",
                                                                                                                                                               random_seed = 123)
@@ -301,7 +301,7 @@ avg_accuracy_wRF_impurity_knn, std_accuracy_wRF_impurity_knn, total_cost_wRF_imp
                                                                                                                                                                       cost_vec = avg_cost_vec,
                                                                                                                                                                       noise_idx = noise_idx,
                                                                                                                                                                       subset_size = subset_size,
-                                                                                                                                                                      classifier_func = classifier, 
+                                                                                                                                                                      classifier_func = classifier,
                                                                                                                                                                       args_classifier = dict_args,
                                                                                                                                                                       num_fold = 3, save_name = "evol_wRF_impurity_kNN_DMC_DMR.pdf",
                                                                                                                                                                       random_seed = 123)
@@ -314,7 +314,7 @@ avg_accuracy_wRF_impurity_SVM, std_accuracy_wRF_impurity_SVM, total_cost_wRF_imp
                                                                                                                                                                       cost_vec = avg_cost_vec,
                                                                                                                                                                       noise_idx = noise_idx,
                                                                                                                                                                       subset_size = subset_size,
-                                                                                                                                                                      classifier_func = classifier, 
+                                                                                                                                                                      classifier_func = classifier,
                                                                                                                                                                       args_classifier = dict(),
                                                                                                                                                                       num_fold = 3, save_name = "evol_wRF_impurity_SVM_DMC_DMR.pdf",
                                                                                                                                                                       random_seed = 123)
@@ -330,7 +330,7 @@ avg_accuracy_wRF_permutation_knn, std_accuracy_wRF_permutation_knn, total_cost_w
                                                                                                                                                                                   cost_vec = avg_cost_vec,
                                                                                                                                                                                   noise_idx = noise_idx,
                                                                                                                                                                                   subset_size = subset_size,
-                                                                                                                                                                                  classifier_func = classifier, 
+                                                                                                                                                                                  classifier_func = classifier,
                                                                                                                                                                                   args_classifier = dict_args,
                                                                                                                                                                                   num_fold = 3, save_name = "evol_wRF_permutation_kNN_DMC_DMR.pdf",
                                                                                                                                                                                   random_seed = 123)
@@ -343,7 +343,7 @@ avg_accuracy_wRF_permutation_SVM, std_accuracy_wRF_permutation_SVM, total_cost_w
                                                                                                                                                                                   cost_vec = avg_cost_vec,
                                                                                                                                                                                   noise_idx = noise_idx,
                                                                                                                                                                                   subset_size = subset_size,
-                                                                                                                                                                                  classifier_func = classifier, 
+                                                                                                                                                                                  classifier_func = classifier,
                                                                                                                                                                                   args_classifier = dict(),
                                                                                                                                                                                   num_fold = 3, save_name = "evol_wRF_permutation_SVM_DMC_DMR.pdf",
                                                                                                                                                                                   random_seed = 123)
@@ -359,7 +359,7 @@ avg_accuracy_penrf_impurity_knn, std_accuracy_penrf_impurity_knn, total_cost_pen
                                                                                                                                                                               cost_vec = avg_cost_vec,
                                                                                                                                                                               noise_idx = noise_idx,
                                                                                                                                                                               subset_size = subset_size,
-                                                                                                                                                                              classifier_func = classifier, 
+                                                                                                                                                                              classifier_func = classifier,
                                                                                                                                                                               args_classifier = dict_args,
                                                                                                                                                                               num_fold = 3, save_name = "evol_penRF_impurity_kNN_DMC_DMR.pdf",
                                                                                                                                                                               random_seed = 123)
@@ -372,7 +372,7 @@ avg_accuracy_penrf_impurity_SVM, std_accuracy_penrf_impurity_SVM, total_cost_pen
                                                                                                                                                                               cost_vec = avg_cost_vec,
                                                                                                                                                                               noise_idx = noise_idx,
                                                                                                                                                                               subset_size = subset_size,
-                                                                                                                                                                              classifier_func = classifier, 
+                                                                                                                                                                              classifier_func = classifier,
                                                                                                                                                                               args_classifier = dict(),
                                                                                                                                                                               num_fold = 3, save_name = "evol_penRF_impurity_SVM_DMC_DMR.pdf",
                                                                                                                                                                               random_seed = 123)
@@ -389,7 +389,7 @@ avg_accuracy_penrf_permutation_knn, std_accuracy_penrf_permutation_knn, total_co
                                                                                                                                                                                           cost_vec = avg_cost_vec,
                                                                                                                                                                                           noise_idx = noise_idx,
                                                                                                                                                                                           subset_size = subset_size,
-                                                                                                                                                                                          classifier_func = classifier, 
+                                                                                                                                                                                          classifier_func = classifier,
                                                                                                                                                                                           args_classifier = dict_args,
                                                                                                                                                                                           num_fold = 3, save_name = "evol_penRF_permutation_kNN_DMC_DMR.pdf",
                                                                                                                                                                                           random_seed = 123)
@@ -402,8 +402,7 @@ avg_accuracy_penrf_permutation_SVM, std_accuracy_penrf_permutation_SVM, total_co
                                                                                                                                                                                           cost_vec = avg_cost_vec,
                                                                                                                                                                                           noise_idx = noise_idx,
                                                                                                                                                                                           subset_size = subset_size,
-                                                                                                                                                                                          classifier_func = classifier, 
+                                                                                                                                                                                          classifier_func = classifier,
                                                                                                                                                                                           args_classifier = dict(),
                                                                                                                                                                                           num_fold = 3, save_name = "evol_penRF_permutation_SVM_DMC_DMR.pdf",
                                                                                                                                                                                           random_seed = 123)
-
