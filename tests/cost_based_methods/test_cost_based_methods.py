@@ -36,7 +36,7 @@ def network_data_dict():
 
 
 @pytest.fixture(params=[
-    'JMI', 'JMIM', 'mRMR', 'reliefF-distance', 'reliefF-rf prox', 'pen_rf_importance-impurity',
+    'JMI', 'JMIM', 'mRMR', 'reliefF-l1', 'reliefF-rf', 'pen_rf_importance-impurity',
     'pen_rf_importance-permutation', 'weighted_rf_importance-impurity',
     'weighted_rf_importance-permutation', 'random',
 ])
@@ -99,15 +99,14 @@ EXPECTED_RANKINGS = {
     'JMIM-0.001': [4, 3, 2, 0, 1],
     'mRMR-0.0': [4, 3, 1, 2, 0],
     'mRMR-0.001': [4, 3, 1, 2, 0],
-    'reliefF-distance-0.0': [2, 1, 0, 4, 3],
-    'reliefF-distance-0.001': [1, 2, 0, 4, 3],
-    'reliefF-rf prox-0.0': [4, 2, 1, 0, 3],
-    'reliefF-rf prox-0.001': [4, 2, 1, 0, 3],
+    'reliefF-l1-0.0': [2, 1, 0, 4, 3],
+    'reliefF-l1-0.001': [1, 2, 0, 4, 3],
 }
 
 
 def is_deterministic(name: str) -> bool:
-    return not any(x in name for x in ['pen_rf_importance', 'weighted_rf_importance', 'random'])
+    return not any(x in name for x in ['pen_rf_importance', 'weighted_rf_importance', 'random',
+                                       'reliefF-rf'])
 
 
 def test_method(method_name: str, network_data_dict: dict,
@@ -125,16 +124,11 @@ def test_method(method_name: str, network_data_dict: dict,
         if deterministic:
             ranking2, *_ = method(**network_data_dict, cost_param=penalty)
             np.testing.assert_array_equal(ranking, ranking2)
-    # Mutual information methods have changed substantially because we adjust for chance.
-    if method_name in {'JMI', 'JMIM', 'mRMR'}:
+    # Mutual information methods have changed substantially because we adjust for chance. ReliefF
+    # has also changed significantly (with better results).
+    if method_name in {'JMI', 'JMIM', 'mRMR', 'reliefF-l1'}:
         return
-    # These methods have changed ever so slightly due to different distance evaluations. But the
-    # rankings remain highly correlated.
-    if method_name.startswith('reliefF'):
-        corr, pval = stats.spearmanr(*rankings)
-        assert corr > 0.5
-        assert pval < 1e-3
-    elif deterministic:
+    if deterministic:
         # Can only compare old and new implementation for deterministic tests.
         np.testing.assert_array_equal(*rankings)
 
@@ -156,10 +150,12 @@ def test_regression(method_name: str, methods: typing.Iterable[typing.Callable],
             pytest.skip(message)
 
         # MI methods have changed substantially so there may be differences between old and new.
-        if method_name in {"JMI", "JMIM", "mRMR"}:
+        # Same for reliefF.
+        if method_name in {"JMI", "JMIM", "mRMR", "reliefF-l1", "reliefF-rf"}:
             return
 
         if (expected := EXPECTED_RANKINGS.get(key)) is None:
             raise KeyError(f"'{key}': {list(ranking)},")
         elif not np.array_equal(ranking, expected):
-            raise ValueError(f"got ranking {ranking} but expected {expected} for method {version}")
+            raise ValueError(f"got ranking {ranking} but expected {expected} for method "
+                             f"{method_name} ({version})")
