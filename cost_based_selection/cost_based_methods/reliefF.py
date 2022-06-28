@@ -186,8 +186,9 @@ def _reliefF(X, y, cost_vec=None, cost_param=0, num_neighbors=10, num_features_t
 
 
 def reliefF(X: np.ndarray, y: np.ndarray, cost_vec: np.ndarray = None, cost_param: float = 0,
-            num_neighbors: int = 10, distance="l1", normalization="range",
-            n_estimators: int = 500, min_samples_leaf: int = 100, is_disc=None):
+            num_neighbors: int = 10, proximity=None, normalization="range",
+            n_estimators: int = 500, min_samples_leaf: int = 100, is_disc=None,
+            debug: bool = False):
     """
     Args:
         X:
@@ -233,12 +234,12 @@ def reliefF(X: np.ndarray, y: np.ndarray, cost_vec: np.ndarray = None, cost_para
     fraction_by_cls = {}
     trees_by_cls = {}
 
-    if distance == "l1":
+    if proximity == "l1":
         for cls in np.unique(y):
             fltr = y == cls
             fraction_by_cls[cls] = fltr.mean()
             trees_by_cls[cls] = NearestNeighbors(X[fltr], distance=1)
-    elif distance == "rf":
+    elif proximity == "rf":
         classifier = RandomForestClassifier(n_estimators=n_estimators,
                                             min_samples_leaf=min_samples_leaf)
         classifier.fit(X, y)
@@ -248,7 +249,7 @@ def reliefF(X: np.ndarray, y: np.ndarray, cost_vec: np.ndarray = None, cost_para
             fraction_by_cls[cls] = fltr.mean()
             trees_by_cls[cls] = NearestNeighbors(X[fltr], distance=-proximity[fltr])
     else:
-        raise NotImplementedError(distance)
+        raise NotImplementedError(proximity)
 
     # Iterate over all samples and update weights.
     weights = np.zeros(num_features)
@@ -256,12 +257,14 @@ def reliefF(X: np.ndarray, y: np.ndarray, cost_vec: np.ndarray = None, cost_para
         for cls, tree in trees_by_cls.items():
             # Get neighbors using L1 norm. If cls is the same as y[i], we get one more neighbor
             # because the first one will be the instance itself.
-            x = X[i] if distance == "l1" else i
+            x = X[i] if proximity == "l1" else i
             if cls == y[i]:
                 _, neighbors = tree.query(x, k=num_neighbors + 1)
                 neighbors = neighbors[1:]
             else:
                 _, neighbors = tree.query(x, k=num_neighbors)
+            # Remove "missing" neighbors.
+            neighbors = neighbors[neighbors < tree.data.shape[0]]
             mean_distance = np.abs(X[i] - tree.data[neighbors]).mean(axis=0)
 
             # Update the feature weights.
