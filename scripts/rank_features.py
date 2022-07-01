@@ -17,9 +17,9 @@ for key in ['pen_rf_importance', 'weighted_rf_importance']:
         METHODS[f'{key}_{implementation}'] = ft.partial(
             getattr(cost_based_methods, key), imp_type=implementation)
 
-for distance in ['l1', 'rf']:
-    METHODS[f"reliefF_{distance}"] = ft.partial(
-        cost_based_methods.reliefF, distance=distance)
+for proximity in ['l1', 'rf']:
+    METHODS[f"reliefF_{proximity}"] = ft.partial(
+        cost_based_methods.reliefF, proximity=proximity)
 
 
 def __main__():
