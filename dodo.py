@@ -214,3 +214,44 @@ def task_yeast_interactome():
             "uptodate": [True],
             "targets": [dataset_filename],
         }
+
+
+def task_figures():
+    for model in ["ba", "dmX"]:
+        target = f"figures/model-figures-{model}.html"
+        args = f"jupyter nbconvert --execute figures/model-figures.ipynb --to=html " \
+            f"--output={target}"
+        yield {
+            "basename": "figures",
+            "name": f"accuracy-cost-maps-{model}",
+            "actions": [
+                (create_folder, ["figures"]),
+                CmdAction(args, env=os.environ | {"MODEL": model}),
+            ],
+            "uptodate": [True],
+            "targets": [target] + [f"figures/{model}-accuracy-matrix-{i}.pdf" for i in range(2)],
+        }
+
+    args = "jupyter nbconvert --execute figures/cost-figures.ipynb --to=html"
+    yield {
+        "basename": "figures",
+        "name": "cost-scaling",
+        "actions": [
+            (create_folder, ["figures"]),
+            args
+        ],
+        "uptodate": [True],
+        "targets": ["figures/cost-figures.html", "figures/cost-scaling.pdf"],
+    }
+
+    args = "jupyter nbconvert --execute figures/yeast.ipynb --to=html"
+    yield {
+        "basename": "figures",
+        "name": "yeast",
+        "actions": [
+            (create_folder, ["figures"]),
+            args
+        ],
+        "uptodate": [True],
+        "targets": ["figures/yeast.html", "figures/yeast.pdf"],
+    }

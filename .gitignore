@@ -138,3 +138,5 @@ workspace/
 _util.c
 _util.html
 .doit.db
+figures/*.pdf
+figures/*.html
