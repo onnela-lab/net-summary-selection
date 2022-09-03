@@ -97,7 +97,7 @@ def __main__(args: list[str] = None) -> int:
     if args.model == 'SVC':
         model_cls = ft.partial(SVC, probability=True)
     elif args.model == 'KNN':
-        model_cls = KNeighborsClassifier
+        model_cls = ft.partial(KNeighborsClassifier, n_neighbors=10)
     else:
         raise NotImplementedError(args.model)
 
