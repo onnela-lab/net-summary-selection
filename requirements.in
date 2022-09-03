@@ -1,0 +1,5 @@
+-e file:.[tests]
+jupyter
+line_profiler
+snakeviz
+rpy2==3.4.5
