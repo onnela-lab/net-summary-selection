@@ -2,24 +2,17 @@
 
 We here provide a Python package named `cost_based_selection` associated with our manuscript
 
-L. Raynal and J.-P. Onnela. "Selection of summary statistics for network model choice." *arXiv*, [2101.07766](https://arxiv.org/abs/2101.07766), 2021.
+L. Raynal, T. Hoffmann, and J.-P. Onnela. "Selection of summary statistics for network model choice." *arXiv*, [2101.07766](https://arxiv.org/abs/2101.07766), 2021.
 
 ## Table of contents
 
 * [Description](#description)
 * [Installation](#installation)
 * [Reproducing the results](#reproducing-the-results)
-* [Package outline](#package-outline)
-* [Simple examples](#simple-examples)
-* [Authors](#authors)
 
 ## Description
 
-This project focuses on cost-based selection of network features. Indeed, when solving network inference problems with approximate Bayesian computation (ABC), because ABC requires simulating a large number of data that are summarized thanks to some features, it is critical to select them to avoid the curse of dimensionality. However, while many features can be used to encode the network structure, their computational complexity can be highly variable and this can quickly create a bottleneck, making the use of ABC even more difficult when working with large network data.
-
-Thanks to cost-based filter selection methods, for classification problems, we take into consideration the computational cost associated to each feature during the feature selection process, to create a balance between total feature cost and classification accuracy.
-
-In our paper we also investigate the benefit of using smaller networks (with fewer nodes than the observed data) for feature selection to classify networks with as many nodes as the observed data. Modules related to this are also provided.
+This project focuses on cost-based selection of features for distinguishing between different (mechanistic network) models. The computational cost of features can vary significantly, and, in computationally demanding settings such as approximate Bayesian computation, selecting low-cost yet informative features is desirable. We consider cost-based adaptations of a range of feature selection methods as well as using pilot simulations based on smaller networks to identify informative features.
 
 ## Installation
 
@@ -28,119 +21,20 @@ In our paper we also investigate the benefit of using smaller networks (with few
 3. Install all python requirements by running `pip install -r requirements.txt`.
 4. Ensure an R interpreter is installed (see https://www.r-project.org for installation instructions).
 5. Install the [`ranger`](https://www.rdocumentation.org/packages/ranger/versions/0.14.1/topics/ranger) package for random forests, e.g., by running `R -e 'if (!require("ranger")) install.packages("ranger", version="0.14.1", repos="http://cran.r-project.org/")'`.
+6. Run `pytest -v` to verify your installation.
 
 ## Reproducing the results
 
-You can reproduce all results presented in our paper by running `doit` from the root of the repository. You may want to parallelize the execution by running `doit -n [number of cores]`. Your results may differ slightly from ours because computation times differ across machines and depend on other processes running on your machine. For reference, the results presented in the manuscript were obtained with `doit -n 6` on a M1 Macbook Pro (2020) with 16GB of memory.
+You can reproduce all results presented in our paper by running the following commands
 
-## Package outline
-
-The `cost_based_selection\data` folder contains the simulated data employed in our paper.
-The `paper_examples` folder contains the scripts to reproduce the examples and analyses we performed.
-The `simple_examples` folder contains very simple examples to illustrate how to use the various functions of the package.
-
-The Python modules of this package are:
-- `summaries.py`: to compute network summary statistics;
-
-- `data_generation.py`: to simulate and compute summarized network data as described in our paper;
-- `preprocessing_utils.py`: to reorder data, drop redundant features or identify position of noise features;
-- `cost_based_methods`: to obtain feature rankings with cost-based feature selection methods;
-- `cost_based_analysis`: to compute and represent the evolution of total cost, classification accuracy, proportion of noise features selected with respect to a grid of cost penalization parameters;
-- `network_size_analysis`: to analyze the relevance of using small or large networks for the selection process and its impact on the classification of large networks.
-
-## Simple examples
-
-### Cost-based selection of features
-
-We present below a very simple example on how to use the main functions of this package to perform cost-based feature selection. See also `simple_examples\BA_cost_based_selection_analysis.py`.
-
-First, generate some data, here according to the four settings of the Barabási-Albert model presented in our paper.
-
-```python
-from cost_based_selection import data_generation
-
-num_sim_model = 50 	# Number of simulated data per model
-num_nodes = 20 		# Number of nodes in each network
-
-dfModIndex, dfSummaries, \
-dfIsDisc, dfTimes = data_generation.BA_ref_table(num_sim_model, num_nodes)
+```bash
+# Ignore figures until we've generated all other results.
+doit ignore figures
+# Run the analysis (this will take some time ...).
+doit -n [number of cores]
+# Forget that we ignored figures ...
+doit forget figures
+# ... and generate them.
+doit figures
 ```
-The outputs generated are pandas DataFrames containing the model indices, the summary statistics values, the types of the summaries (i.e. discrete or continuous numerical features), the times in seconds to generate each entry and each summary. We then apply some preprocessing/utility functions.
-
-```Python
-from cost_based_selection import preprocessing_utils
-
-# Remove the redundant features, if any
-dfModIndex, dfSummaries, \
-dfIsDisc, dfTimes = preprocessing_utils.drop_redundant_features(dfModIndex,
-                                                                dfSummaries,
-                                                                dfIsDisc,
-                                                                dfTimes)
-# Identify the noise features
-noise_idx = preprocessing_utils.noise_position(dfSummaries)
-```
-
-Compute the feature cost vector, here the average computational time of each feature, that we normalize.
-
-```python
-avg_cost_vec = preprocessing_utils.compute_avg_cost(dfTimes)
-```
-
-We convert the data to the correct format and keep some for the classifier training/evaluation.
-
-```python
-import numpy as np
-from sklearn.model_selection import train_test_split
-
-X = np.array(dfSummaries)
-y = dfModIndex.modIndex.tolist()
-is_disc = dfIsDisc.iloc[0,:].tolist()
-(X_train, X_val, \
- y_train, y_val) = train_test_split(X, y, test_size=0.5, random_state=123, stratify=y)
-```
-We now can obtain a feature ranking given a cost penalization parameter value, or we can use a list of parameters to obtain each ranking in a pandas DataFrame. We below use the method based on Joint Mutual Information (JMI), but other methods can be used similarly. See the module `cost_based_methods`.
-
-```python
-from cost_based_selection import cost_based_methods
-
-# Given a unique cost penalization parameter
-ranking, *rest = cost_based_methods.JMI(X = X_train, y = y_train,
-                                        is_disc = is_disc, cost_vec = avg_cost_vec,
-                                        cost_param = 1)
-dfSummaries.columns[ranking] # Summaries in decreasing order of importance
-
-# Given a list of cost penalization parameters
-grid_cost_param = [0, 1, 2, 3, 4]
-dfRank = cost_based_methods.multi_JMI(X = X_train, y = y_train,
-                                      is_disc = is_disc, cost_vec = avg_cost_vec,
-                                      cost_param_vec = grid_cost_param)
-```
-Finally, using the rankings we can plot the k-fold cross-validation accuracy of a classifier and visualize the trade-off between total cost reduction and classification accuracy depending on the penalization parameters. This is useful to determine a correct value for this latter.
-
-```python
-from cost_based_selection import cost_based_analysis
-from sklearn.neighbors import KNeighborsClassifier
-
-subset_size = 15 					# Number of best features to keep
-classifier = KNeighborsClassifier 	# Classifier, k-nn for example
-dict_args = {'n_neighbors':10}		# Arguments of the classifier
-
-avg_accuracy, std_accuracy, \
-total_cost, prop_noise = \
-cost_based_analysis.accuracy_classifier_plot(dfPen_Ranking = dfRank, X_val = X_val,
-                                             y_val = y_val, cost_vec = avg_cost_vec,
-                                             noise_idx = noise_idx,
-                                             subset_size = subset_size,
-                                             classifier_func = classifier,
-                                             args_classifier = dict_args,
-                                             num_fold = 3, save_name = None)
-```
-
-### Influence of network size to select features
-
-We also provide a simple code (see `simple_examples\BA_network_size_analysis.py`) to illustrate how to analyze the influence of using feature selection with smaller networks, to then classify larger networks.
-
-
-## Authors
-* **Louis Raynal** - *Harvard T.H. Chan School of Public Health*
-* **Jukka-Pekka Onnela** - *Harvard T.H. Chan School of Public Health*
+Your results may differ slightly from ours because computation times differ across machines and depend on other processes running on your machine. For reference, the results presented in the manuscript were obtained with `doit -n 6` on a M1 Macbook Pro (2020) with 16GB of memory.
