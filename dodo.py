@@ -1,4 +1,5 @@
 from doit.action import CmdAction
+from doit.tools import create_folder
 import functools as ft
 import itertools as it
 import numpy as np
@@ -53,6 +54,21 @@ for num_nodes, seed in it.product((1 + np.arange(10)) * 100, range(num_seeds)):
         "seed_offset": num_nodes * 31 + 7919 * seed,
     }
 
+CONFIGS.update({
+    "yeast/yu2008": {
+        "num_nodes": 1278,
+        "seed_offset": 9717,
+    },
+    "yeast/ito2001": {
+        "num_nodes": 813,
+        "seed_offset": 9789,
+    },
+    "yeast/uetz2000": {
+        "num_nodes": 437,
+        "seed_offset": 9990,
+    }
+})
+
 # Different methods to generate rankings from.
 METHODS = [
     "JMI", "JMIM", "mRMR", "reliefF_l1", "reliefF_rf", "random_ranking",
@@ -61,8 +77,8 @@ METHODS = [
 ]
 # Cost regularization values.
 PENALTIES = [
-    0, 0.0125, 0.025, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.1, 1.6, 2.3, 3.2, 4.5, 6.4, 8, 9, 10, 11, 12,
-    12.8, 25.6, 51.2, 102.4, 204.8,
+    0, 0.0125, 0.025, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.1, 1.6, 2.3, 3.2, 4.5, 6.4, 8, 9, 10,
+    11, 12, 12.8, 25.6, 51.2, 102.4, 204.8,
 ]
 
 
@@ -77,6 +93,9 @@ def task_main():
     for model in MODELS:
         configs_by_seed = {}
         for key, config in CONFIGS.items():
+            # Don't run Barabasi-Albert simulations for yeast models.
+            if key.startswith("yeast") and model != "dmX":
+                continue
             simulation_basename = os.path.join(model, "simulations", key)
             # Generate realisations of different models with varying number of nodes.
             simulation_targets = []
@@ -97,6 +116,10 @@ def task_main():
                            f"{batch})",
                 }
                 simulation_targets.append(target)
+
+            # No need to do any ranking or evaluation for the yeast data.
+            if key.startswith("yeast"):
+                continue
 
             # No need to rank the test set.
             if key == "test":
@@ -171,3 +194,23 @@ def task_main():
         for seed, configs in configs_by_seed.items():
             if len(configs) > 1:
                 raise ValueError(f"configs {configs} have the same seed {seed}")
+
+
+def task_yeast_interactome():
+    urls = {
+        "yu2008": "http://interactome.dfci.harvard.edu/S_cerevisiae/download/CCSB-Y2H.txt",
+        "ito2001": "http://interactome.dfci.harvard.edu/S_cerevisiae/download/Ito_core.txt",
+        "uetz2000": "http://interactome.dfci.harvard.edu/S_cerevisiae/download/Uetz_screen.txt",
+    }
+    for key, url in urls.items():
+        dataset_filename = ROOT / f"dmX/data/{key}.txt"
+        yield {
+            "basename": "yeast_interactome/data",
+            "name": key,
+            "actions": [
+                (create_folder, [dataset_filename.parent]),
+                ["curl", "-o", str(dataset_filename), "-L", url]
+            ],
+            "uptodate": [True],
+            "targets": [dataset_filename],
+        }
