@@ -76,16 +76,6 @@ def weighted_rf_importance(X, y: np.ndarray, cost_vec=None, cost_param=0,
     rpy2.robjects.globalenv["sampling_weights"] = sampling_weights
 
     weighted_rf_importance = rpy2.robjects.r('''
-    # Check if ranger is installed
-    packages = c("ranger")
-    package.check <- lapply(
-            packages,
-            FUN = function(x) {
-                    if (!require(x, character.only = TRUE)) {
-                            install.packages(x, dependencies = TRUE)
-                            library(x, character.only = TRUE)}
-            }
-           )
     # Determine the importance
     library(ranger)
     trainedWeightedRF <- ranger(x=as.data.frame(X_train), y = as.numeric(y_train),

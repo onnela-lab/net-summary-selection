@@ -75,16 +75,6 @@ def pen_rf_importance(X, y, cost_vec=None, cost_param=0, num_features_to_select=
         rpy2.robjects.globalenv["n_estimators"] = n_estimators
 
         unpenalized_rf_importance = rpy2.robjects.r('''
-        # Check if ranger is installed
-        packages = c("ranger")
-        package.check <- lapply(
-                packages,
-                FUN = function(x) {
-                        if (!require(x, character.only = TRUE)) {
-                                install.packages(x, dependencies = TRUE)
-                                library(x, character.only = TRUE)
-                        }
-                      })
         # Determine the importance
         library(ranger)
         trainedRF <- ranger(x=as.data.frame(X_train), y = as.numeric(y_train),
